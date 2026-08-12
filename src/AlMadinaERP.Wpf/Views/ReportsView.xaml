@@ -1,0 +1,519 @@
+<UserControl x:Class="AlMadinaERP.Wpf.Views.ReportsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F8FAFC">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+            <!-- ============================================================== -->
+            <!-- TAB 1: INVENTORY LEDGER (SCREENSHOT 1 MATCH)                   -->
+            <!-- ============================================================== -->
+            <TabItem Header="Inventory Ledger">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Inventory Ledger" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Overview of material movements and balance." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Content="🖨️ Print Ledger" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                                <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="260"/>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="140"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding InventorySearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,10,0"/>
+                                    <DatePicker Grid.Column="1" Height="34" Margin="0,0,10,0"/>
+                                    <DatePicker Grid.Column="2" Height="34" Margin="0,0,10,0"/>
+                                    <Button Grid.Column="4" Content="Generate Report" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Height="34" Cursor="Hand"/>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="40">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridTextColumn Header="PURCHASE RATE" Binding="{Binding PurchasePrice, StringFormat='Rs. {0:N0}'}" Width="130"/>
+                                        <DataGridTextColumn Header="RETAIL RATE" Binding="{Binding SalePrice, StringFormat='Rs. {0:N0}'}" Width="130"/>
+                                        <DataGridTextColumn Header="UNIT" Binding="{Binding UnitName}" Width="80"/>
+                                        <DataGridTextColumn Header="OPENING BALANCE" Binding="{Binding CurrentStock, StringFormat='{}{0:N0} Pcs'}" Width="140"/>
+                                        <DataGridTextColumn Header="CURRENT STOCK" Binding="{Binding CurrentStock, StringFormat='{}{0:N0} Pcs'}" Width="140" FontWeight="Bold" Foreground="#16A34A"/>
+                                        <DataGridTemplateColumn Header="ACTION" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.ViewInventoryItemLedgerCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="View Ledger" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Cursor="Hand"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================================================== -->
+            <!-- TAB 2: INVENTORY BALANCES (SCREENSHOT 2 MATCH)                 -->
+            <!-- ============================================================== -->
+            <TabItem Header="Inventory Balances">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Inventory Balances" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Track product stock along with opening, in/out, and closing values." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Content="🖨️ Print Balances" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                                <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 4 STAT CARDS (SCREENSHOT 2 MATCH) -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL ITEMS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding TotalInventoryItemsCount}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL STOCK VALUE" Foreground="#2563EB" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding TotalInventoryStockValue, StringFormat='Rs. {0:N0}'}" Foreground="#2563EB" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL PURCHASE VALUE" Foreground="#16A34A" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding TotalInventoryPurchaseValue, StringFormat='Rs. {0:N0}'}" Foreground="#16A34A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="ITEMS LOW STOCK" Foreground="#DC2626" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding ItemsLowStockCount}" Foreground="#DC2626" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- INVENTORY STOCK BALANCES TABLE -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="120" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridTextColumn Header="CATEGORY" Binding="{Binding CategoryName}" Width="150"/>
+                                        <DataGridTextColumn Header="UNIT" Binding="{Binding UnitName}" Width="80"/>
+                                        <DataGridTextColumn Header="STOCK QTY" Binding="{Binding CurrentStock, StringFormat='{}{0:N0}'}" Width="110" FontWeight="Bold" Foreground="#16A34A"/>
+                                        <DataGridTextColumn Header="PURCHASE PRICE" Binding="{Binding PurchasePrice, StringFormat='PKR {0:N0}'}" Width="130"/>
+                                        <DataGridTextColumn Header="SALE PRICE" Binding="{Binding SalePrice, StringFormat='PKR {0:N0}'}" Width="130" FontWeight="Bold"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================================================== -->
+            <!-- TAB 3: LOW STOCK ALERT                                         -->
+            <!-- ============================================================== -->
+            <TabItem Header="Low Stock Alert">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Low Stock Alert" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Notifications for items below minimum required stock." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding GenerateReportsCommand}" Content="🔄 Refresh Alerts" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <DataGrid ItemsSource="{Binding LowStockAlerts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="CATEGORY" Binding="{Binding CategoryName}" Width="150"/>
+                                        <DataGridTextColumn Header="CURRENT STOCK" Binding="{Binding CurrentStock, StringFormat='{}{0:N0}'}" Width="130" FontWeight="Bold" Foreground="#DC2626"/>
+                                        <DataGridTextColumn Header="MIN REQUIRED" Binding="{Binding LowStockAlert, StringFormat='{}{0:N0}'}" Width="130" FontWeight="Bold" Foreground="#D97706"/>
+                                        <DataGridTextColumn Header="UNIT" Binding="{Binding Unit}" Width="90"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <!-- ============================================================== -->
+            <!-- TAB 6: CUSTOMER BALANCES REPORT                                -->
+            <!-- ============================================================== -->
+            <TabItem Header="Customer Balances">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Customer Balances Report" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Summary of all customer receivables, advances, and current balances." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintCustomerBalancesListCommand}" Content="🖨️ Print Balances" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,14">
+                                    <TextBox Text="{Binding CustomerSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="300" HorizontalAlignment="Left" Height="34"/>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding CustomerBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="CUSTOMER CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="CUSTOMER NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="PHONE" Binding="{Binding Phone}" Width="130"/>
+                                        <DataGridTextColumn Header="AREA" Binding="{Binding Area}" Width="120"/>
+                                        <DataGridTextColumn Header="ADVANCE AVAILABLE" Binding="{Binding AdvanceAvailable, StringFormat='PKR {0:N0}'}" Width="150" Foreground="#16A34A" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="OUTSTANDING OWED" Binding="{Binding CustomerOwes, StringFormat='PKR {0:N0}'}" Width="150" Foreground="#DC2626" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="STATUS" Binding="{Binding StatusText}" Width="140" FontWeight="Bold"/>
+                                        <DataGridTemplateColumn Header="ACTION" Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.ViewCustomerLedgerCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="View Ledger" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Cursor="Hand"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- GRAND TOTAL FOOTER ROW -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="12" Margin="0,10,0,0">
+                                    <DockPanel>
+                                        <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding TotalCustomerAdvance, StringFormat='Total Advance: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                            <TextBlock Text="{Binding TotalCustomerReceivable, StringFormat='Total Receivable: PKR {0:N0}'}" Foreground="#DC2626" FontWeight="Bold" Margin="0,0,20,0"/>
+                                            <TextBlock Text="{Binding NetCustomerBalance, StringFormat='Net Balance: PKR {0:N0}'}" Foreground="#2563EB" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================================================== -->
+            <!-- TAB 7: DEDICATED VENDOR BALANCES REPORT                        -->
+            <!-- ============================================================== -->
+            <TabItem Header="Vendor Balances">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Vendor Balances Report" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Dedicated summary of supplier payables, advances, and ledger status." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintVendorBalancesListCommand}" Content="🖨️ Print Balances" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,14">
+                                    <TextBox Text="{Binding VendorSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="300" HorizontalAlignment="Left" Height="34"/>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding VendorBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="VENDOR CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="VENDOR NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="PHONE" Binding="{Binding Phone}" Width="130"/>
+                                        <DataGridTextColumn Header="AREA" Binding="{Binding Area}" Width="120"/>
+                                        <DataGridTextColumn Header="ADVANCE PAID" Binding="{Binding AdvanceAvailable, StringFormat='PKR {0:N0}'}" Width="150" Foreground="#16A34A" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="OUTSTANDING PAYABLE" Binding="{Binding VendorOwes, StringFormat='PKR {0:N0}'}" Width="170" Foreground="#DC2626" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="STATUS" Binding="{Binding StatusText}" Width="140" FontWeight="Bold"/>
+                                        <DataGridTemplateColumn Header="ACTION" Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.ViewVendorLedgerCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="Vendor Ledger" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Cursor="Hand"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- GRAND TOTAL FOOTER ROW -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="12" Margin="0,10,0,0">
+                                    <DockPanel>
+                                        <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding TotalVendorAdvanceVendorOwes, StringFormat='Total Advance: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                            <TextBlock Text="{Binding TotalVendorPayableWeOwe, StringFormat='Total Payable: PKR {0:N0}'}" Foreground="#DC2626" FontWeight="Bold" Margin="0,0,20,0"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <!-- ============================================================== -->
+            <!-- TAB 6: JOURNAL REPORT (DAILY ACTIVITY REGISTER)                -->
+            <!-- ============================================================== -->
+            <TabItem Header="Journal Report (Daily Register)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="General Activity Journal Register" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Comprehensive record of all daily transactions: Sales, Purchases, Receipts, Payments, Expenses, and Journals." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintJournalReportCommand}" Content="🖨️ Print Journal Report" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- DATE RANGE FILTER BAR -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="From Date:" Foreground="#475569" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <DatePicker Grid.Column="1" SelectedDate="{Binding JournalFromDate, Mode=TwoWay}" Height="32"/>
+
+                                <TextBlock Grid.Column="2" Text="To Date:" Foreground="#475569" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                                <DatePicker Grid.Column="3" SelectedDate="{Binding JournalToDate, Mode=TwoWay}" Height="32"/>
+
+                                <Button Grid.Column="5" Command="{Binding LoadJournalActivitiesCommand}" Content="🔍 Filter Journal" Background="#0F172A" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Height="32" Cursor="Hand"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- ACTIVITIES TABLE -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <DataGrid ItemsSource="{Binding JournalActivities}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="36">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="DATE &amp; TIME" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="140"/>
+                                        <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="150" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="REF VOUCHER #" Binding="{Binding ReferenceNumber}" Width="130" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="ACCOUNT / PARTY" Binding="{Binding AccountPartyName}" Width="*" MinWidth="180"/>
+                                        <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding Description}" Width="*" MinWidth="180"/>
+                                        <DataGridTextColumn Header="DEBIT (PKR)" Binding="{Binding Debit, StringFormat='PKR {0:N0}'}" Width="130" FontWeight="Bold" Foreground="#16A34A"/>
+                                        <DataGridTextColumn Header="CREDIT (PKR)" Binding="{Binding Credit, StringFormat='PKR {0:N0}'}" Width="130" FontWeight="Bold" Foreground="#DC2626"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- GRAND TOTAL FOOTER ROW -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="12" Margin="0,10,0,0">
+                                    <DockPanel>
+                                        <TextBlock Text="JOURNAL REGISTER GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding TotalJournalCount, StringFormat='Total Activities: {0}'}" Foreground="#475569" FontWeight="Bold" Margin="0,0,24,0"/>
+                                            <TextBlock Text="{Binding TotalJournalDebits, StringFormat='Total Debit: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,24,0"/>
+                                            <TextBlock Text="{Binding TotalJournalCredits, StringFormat='Total Credit: PKR {0:N0}'}" Foreground="#DC2626" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- ============================================================== -->
+        <!-- MODAL 1: CUSTOMER LEDGER OVERLAY                               -->
+        <!-- ============================================================== -->
+        <Grid Background="#80000000" Visibility="{Binding IsCustomerLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="920" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="20,16" Background="#7A0C0C" CornerRadius="12,12,0,0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedCustomerBalance.Name, StringFormat='Customer Ledger — {0}'}" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedCustomerBalance.Code, StringFormat='Code: {0} | Complete Transaction History &amp; Running Balance'}" Foreground="#FDE047" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintCustomerLedgerCommand}" Content="🖨️ Print Ledger" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="10,4" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding CloseCustomerLedgerCommand}" Content="✕" Background="Transparent" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold" Padding="4,0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Padding="16,12" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <Button Command="{Binding CloseCustomerLedgerCommand}" Content="Close Ledger" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,8" HorizontalAlignment="Right" Cursor="Hand"/>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <DataGrid ItemsSource="{Binding CustomerLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="130"/>
+                                <DataGridTextColumn Header="TYPE" Binding="{Binding TransactionType}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="120"/>
+                                <DataGridTextColumn Header="DEBIT (+)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#DC2626"/>
+                                <DataGridTextColumn Header="CREDIT (-)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#16A34A"/>
+                                <DataGridTextColumn Header="BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="130" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- MODAL 2: VENDOR LEDGER OVERLAY                                 -->
+        <!-- ============================================================== -->
+        <Grid Background="#80000000" Visibility="{Binding IsVendorLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="920" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="20,16" Background="#7A0C0C" CornerRadius="12,12,0,0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedVendorBalance.Name, StringFormat='Vendor Ledger — {0}'}" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedVendorBalance.Code, StringFormat='Code: {0} | Complete Transaction History &amp; Running Balance'}" Foreground="#FDE047" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintVendorLedgerCommand}" Content="🖨️ Print Ledger" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="10,4" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding CloseVendorLedgerCommand}" Content="✕" Background="Transparent" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold" Padding="4,0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Padding="16,12" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <Button Command="{Binding CloseVendorLedgerCommand}" Content="Close Ledger" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,8" HorizontalAlignment="Right" Cursor="Hand"/>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <DataGrid ItemsSource="{Binding VendorLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="130"/>
+                                <DataGridTextColumn Header="TYPE" Binding="{Binding TransactionType}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="120"/>
+                                <DataGridTextColumn Header="DEBIT (-)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#16A34A"/>
+                                <DataGridTextColumn Header="CREDIT (+)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#DC2626"/>
+                                <DataGridTextColumn Header="BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="130" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- MODAL 3: INVENTORY ITEM LEDGER OVERLAY                         -->
+        <!-- ============================================================== -->
+        <Grid Background="#80000000" Visibility="{Binding IsInventoryLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="980" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="20,16" Background="#7A0C0C" CornerRadius="12,12,0,0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedInventoryItem.Name, StringFormat='Inventory Ledger — {0}'}" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedInventoryItem.Code, StringFormat='Code: {0} | Detailed historical tracking of all stock movements'}" Foreground="#FDE047" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintInventoryLedgerCommand}" Content="🖨️ Print Ledger" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="10,4" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding CloseInventoryLedgerCommand}" Content="✕" Background="Transparent" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold" Padding="4,0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Padding="16,12" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <Button Command="{Binding CloseInventoryLedgerCommand}" Content="Close Ledger" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,8" HorizontalAlignment="Right" Cursor="Hand"/>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <StackPanel>
+                            <!-- Inventory Summary Cards -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="OPENING STOCK" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedInventoryItem.OpeningStock, StringFormat='{}{0:N0}'}" Foreground="#0F172A" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="CURRENT STOCK" Foreground="#16A34A" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedInventoryItem.CurrentStock, StringFormat='{}{0:N0}'}" Foreground="#16A34A" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="4" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="PURCHASE PRICE" Foreground="#2563EB" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedInventoryItem.PurchasePrice, StringFormat='PKR {0:N0}'}" Foreground="#2563EB" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="6" Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="6" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="SALE RETAIL PRICE" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedInventoryItem.SalePrice, StringFormat='PKR {0:N0}'}" Foreground="#7A0C0C" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <DataGrid ItemsSource="{Binding InventoryLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="130"/>
+                                    <DataGridTextColumn Header="TRAN. NO." Binding="{Binding VoucherNumber}" Width="110"/>
+                                    <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="130" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="QTY IN (+)" Binding="{Binding QuantityIn, StringFormat='{}{0:N0}'}" Width="90" Foreground="#16A34A"/>
+                                    <DataGridTextColumn Header="QTY OUT (-)" Binding="{Binding QuantityOut, StringFormat='{}{0:N0}'}" Width="90" Foreground="#DC2626"/>
+                                    <DataGridTextColumn Header="UNIT" Binding="{Binding Unit}" Width="70"/>
+                                    <DataGridTextColumn Header="STOCK BALANCE" Binding="{Binding RunningBalance, StringFormat='{}{0:N0}'}" Width="110" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="REMARKS / WAREHOUSE" Binding="{Binding Remarks}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

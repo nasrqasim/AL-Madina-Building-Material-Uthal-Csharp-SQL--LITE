@@ -1,0 +1,562 @@
+<UserControl x:Class="AlMadinaERP.Wpf.Views.CustomersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F8FAFC">
+    <Grid>
+        <!-- Main Customer Balances Content -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <StackPanel>
+                <!-- TOP HEADER BAR -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Customer Balances" Foreground="#0F172A" FontSize="22" FontWeight="Bold"/>
+                        <TextBlock Text="Master Data / Customer Balances" Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Top Action Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="📊 Export Excel" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
+                        <Button Content="🖨️ Print List" Command="{Binding PrintCustomersListCommand}" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3" Cursor="Hand"/>
+                        <Button Content="📥 Download Template" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
+                        <Button Content="📤 Import Excel" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 4 TOP SUMMARY CARDS -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Total Customers" Foreground="#047857" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TotalCustomersCount}" Foreground="#065F46" FontSize="24" FontWeight="Bold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="#FEF2F2" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Total Customer Receivable" Foreground="#BE123C" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TotalCustomerReceivable, StringFormat='Rs. {0:N0}'}" Foreground="#9F1239" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="4" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Total Customer Advance" Foreground="#15803D" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TotalCustomerAdvance, StringFormat='Rs. {0:N0}'}" Foreground="#166534" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="6" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Net Customer Balance" Foreground="#1D4ED8" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding NetCustomerBalance, StringFormat='Rs. {0:N0}'}" Foreground="#1E40AF" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- FILTER BAR -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,16">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                            <Button Content="All" Command="{Binding FilterStatusCommand}" CommandParameter="All" Background="#7A0C0C" Foreground="#FFFFFF" Padding="14,6" Margin="0,0,6,0"/>
+                            <Button Content="Customer Owes" Command="{Binding FilterStatusCommand}" CommandParameter="Customer Owes" Background="#F1F5F9" Foreground="#334155" Padding="14,6" Margin="0,0,6,0"/>
+                            <Button Content="Advance Available" Command="{Binding FilterStatusCommand}" CommandParameter="Advance Available" Background="#F1F5F9" Foreground="#334155" Padding="14,6" Margin="0,0,6,0"/>
+                            <Button Content="Settled" Command="{Binding FilterStatusCommand}" CommandParameter="Settled" Background="#F1F5F9" Foreground="#334155" Padding="14,6" Margin="0,0,6,0"/>
+                        </StackPanel>
+
+                        <Grid>
+                            <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="350" HorizontalAlignment="Left" Padding="10,6" Margin="0"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="🖨️ PRINT" Command="{Binding PrintCustomersListCommand}" Background="#E2E8F0" Foreground="#1E293B" Padding="12,6" Margin="0,0,8,0" Cursor="Hand"/>
+                                <Button Content="+ NEW CUSTOMER" Command="{Binding OpenAddCustomerModalCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6"/>
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <!-- DATAGRID TABLE -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                    <DockPanel>
+                        <DataGrid ItemsSource="{Binding Customers}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" Foreground="#0F172A" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="400">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="CUSTOMER" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                <DataGridTextColumn Header="PHONE" Binding="{Binding Phone}" Width="120"/>
+                                <DataGridTextColumn Header="CUSTOMER RECEIVABLE" Binding="{Binding CustomerOwes, StringFormat='Rs. {0:N0}'}" Width="200" Foreground="#DC2626"/>
+                                <DataGridTextColumn Header="ADVANCE AVAILABLE" Binding="{Binding AdvanceAvailable, StringFormat='Rs. {0:N0}'}" Width="200" Foreground="#16A34A"/>
+                                <DataGridTextColumn Header="NET BALANCE" Binding="{Binding NetBalance, StringFormat='Rs. {0:N0}'}" Width="150" FontWeight="Bold"/>
+                                <DataGridTemplateColumn Header="STATUS" Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F1F5F9" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding StatusText}" Foreground="#0F172A" FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="ACTIONS" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <Button Content="✏️" Command="{Binding DataContext.EditCustomerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="Transparent" Foreground="#2563EB" Cursor="Hand" ToolTip="Edit Customer"/>
+                                                <Button Content="📕" Command="{Binding DataContext.LoadCustomerLedgerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Id}" Padding="4,2" Margin="2" Background="Transparent" Foreground="#7A0C0C" Cursor="Hand" ToolTip="View Ledger"/>
+                                                <Button Content="🗑️" Command="{Binding DataContext.DeleteCustomerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Id}" Padding="4,2" Margin="2" Background="Transparent" Foreground="#DC2626" Cursor="Hand" ToolTip="Delete Customer"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border DockPanel.Dock="Bottom" Background="#F1F5F9" Padding="16,10" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                            <Grid>
+                                <TextBlock Text="TOTAL:" Foreground="#0F172A" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding TotalCustomerReceivable, StringFormat='Receivable: Rs. {0:N0}'}" Foreground="#DC2626" FontSize="12" FontWeight="Bold" Margin="0,0,20,0"/>
+                                    <TextBlock Text="{Binding TotalCustomerAdvance, StringFormat='Advance: Rs. {0:N0}'}" Foreground="#16A34A" FontSize="12" FontWeight="Bold" Margin="0,0,20,0"/>
+                                    <TextBlock Text="{Binding NetCustomerBalance, StringFormat='Net: Rs. {0:N0}'}" Foreground="#2563EB" FontSize="12" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ADD NEW CUSTOMER MODAL DIALOG OVERLAY (100% Match to User Screenshot) -->
+        <Grid Background="#80000000" Visibility="{Binding IsAddCustomerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="680" MaxHeight="780" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <!-- Header -->
+                    <Border DockPanel.Dock="Top" Padding="20,16" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <TextBlock Text="Add New Customer" Foreground="#0F172A" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button Content="✕" Command="{Binding CloseAddCustomerModalCommand}" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Footer Actions -->
+                    <Border DockPanel.Dock="Bottom" Background="#F8FAFC" Padding="20,14" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Cancel" Command="{Binding CloseAddCustomerModalCommand}" Background="Transparent" Foreground="#64748B" Padding="16,8" Margin="0,0,10,0"/>
+                            <Button Content="💾 Create" Command="{Binding SaveCustomerCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="20,8"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Scrollable Form Fields -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+                        <StackPanel>
+                            <!-- Account Code -->
+                            <TextBlock Text="ACCOUNT CODE (AUTO-GENERATED IF LEFT BLANK)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding SelectedCustomer.Code}" Margin="0,0,0,14" Padding="10,8" Background="#F8FAFC"/>
+
+                            <!-- Row 1: Name & Contact Person -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="CUSTOMER NAME *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.Name}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="CONTACT PERSON" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.ContactPerson}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 2: Category & Phone -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="CATEGORY *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <ComboBox Text="{Binding SelectedCustomer.Category}" SelectedIndex="0" Height="36">
+                                        <ComboBoxItem Content="Cash Customer"/>
+                                        <ComboBoxItem Content="Credit Customer"/>
+                                        <ComboBoxItem Content="Wholesale Customer"/>
+                                        <ComboBoxItem Content="Retail Customer"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="PHONE *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.Phone}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 3: NTN & STRN -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="NTN (NATIONAL TAX NUMBER)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.NTN}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="STRN (SALES TAX REGISTRATION)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.STRN}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 4: Address -->
+                            <TextBlock Text="ADDRESS" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding SelectedCustomer.Address}" Height="55" TextWrapping="Wrap" Margin="0,0,0,14" Padding="10,8" Background="#F8FAFC"/>
+
+                            <!-- Row 5: Region & Area -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="REGION" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <ComboBox Text="{Binding SelectedCustomer.Region}" SelectedIndex="0" Height="36">
+                                        <ComboBoxItem Content="Select Region"/>
+                                        <ComboBoxItem Content="Balochistan"/>
+                                        <ComboBoxItem Content="Sindh"/>
+                                        <ComboBoxItem Content="Punjab"/>
+                                        <ComboBoxItem Content="KPK"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="AREA" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.Area}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 6: Postal Code & Country -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="POSTAL CODE" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.PostalCode}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="COUNTRY" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.Country}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 7: Credit Limit & Credit Days -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="CREDIT LIMIT (PKR)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.CreditLimit, StringFormat='{}{0:0}'}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="CREDIT DAYS" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.CreditDays}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 8: Customer Receivable & Advance Balance -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="CUSTOMER RECEIVABLE (CUSTOMER OWES)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.OwesAmount, StringFormat='{}{0:0}'}" Background="#FEF2F2" BorderBrush="#FECDD3" Padding="10,8"/>
+                                    <TextBlock Text="AMOUNT OWED BY CUSTOMER" Foreground="#94A3B8" FontSize="9" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="ADVANCE BALANCE (WE OWE CUSTOMER)" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SelectedCustomer.AdvanceAvailable, StringFormat='{}{0:0}'}" Background="#F0FDF4" BorderBrush="#BBF7D0" Padding="10,8"/>
+                                    <TextBlock Text="PAYMENTS RECEIVED FROM CUSTOMER" Foreground="#94A3B8" FontSize="9" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 9: Net Balance & Status -->
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="NET BALANCE" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="PKR 0" IsReadOnly="True" Background="#F1F5F9" Padding="10,8"/>
+                                    <TextBlock Text="AUTO-CALCULATED (RECEIVABLE - ADVANCE)" Foreground="#94A3B8" FontSize="9" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="STATUS" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="Settled" IsReadOnly="True" Background="#F1F5F9" Padding="10,8"/>
+                                    <TextBlock Text="AUTO-CALCULATED BASED ON BALANCES" Foreground="#94A3B8" FontSize="9" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Row 10: Notes -->
+                            <TextBlock Text="NOTES" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding SelectedCustomer.Notes}" Height="50" TextWrapping="Wrap" Padding="10,8" Background="#F8FAFC"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- CUSTOMER MASTER DETAIL VIEW DIALOG OVERLAY -->
+        <Grid Background="#80000000" Visibility="{Binding IsLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#F8FAFC" CornerRadius="12" Margin="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <!-- Header Bar -->
+                    <Border DockPanel.Dock="Top" Padding="20,14" Background="#7A0C0C" CornerRadius="12,12,0,0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SelectedCustomerDto.Name}" Foreground="#FFFFFF" FontSize="20" FontWeight="Bold"/>
+                                    <Border Background="#FDE047" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedCustomerDto.Code}" Foreground="#0F172A" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedCustomerDto.StatusText}" Foreground="#15803D" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedCustomerDto.Phone, StringFormat='Phone: {0} | Complete Customer Statement &amp; Purchase History'}" Foreground="#E2E8F0" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding CloseLedgerModalCommand}" Content="← BACK TO CUSTOMERS LIST" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="14,6" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding PrintCustomerLedgerCommand}" Content="🖨️ Print Statement" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="12,6" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding CloseLedgerModalCommand}" Content="✕" Background="Transparent" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold" Padding="6,0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Footer Bar -->
+                    <Border DockPanel.Dock="Bottom" Padding="16,10" Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0">
+                        <DockPanel>
+                            <TextBlock Text="AL MADINA BUILDING MATERIAL ERP — CUSTOMER MASTER STATEMENT" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            <Button Command="{Binding CloseLedgerModalCommand}" Content="← BACK TO CUSTOMERS LIST" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,6" HorizontalAlignment="Right" Cursor="Hand"/>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Scrollable Master Content Body -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <StackPanel>
+                            <!-- Top 4 Summary Metric Cards -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Card 1: Total Sales Value -->
+                                <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Sales Value" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalSalesValue, StringFormat='PKR {0:N0}'}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Card 2: Total Payments Received -->
+                                <Border Grid.Column="2" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Payments Received" Foreground="#15803D" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalPaymentsReceived, StringFormat='PKR {0:N0}'}" Foreground="#166534" FontSize="20" FontWeight="Bold" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Card 3: Last Sale Info -->
+                                <Border Grid.Column="4" Background="#FEF2F2" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="8" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Last Sale" Foreground="#BE123C" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding LastSaleInfo}" Foreground="#9F1239" FontSize="14" FontWeight="Bold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Card 4: Last Payment Info -->
+                                <Border Grid.Column="6" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Last Payment / Receipt" Foreground="#1D4ED8" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding LastPaymentInfo}" Foreground="#1E40AF" FontSize="14" FontWeight="Bold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Tabbed Sections Container -->
+                            <Border Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="16">
+                                <TabControl SelectedIndex="{Binding SelectedDetailTabIndex}" Background="Transparent" BorderThickness="0">
+                                    
+                                    <!-- TAB 1: PURCHASED ITEMS SUMMARY -->
+                                    <TabItem Header="🛒 Purchased Items Summary">
+                                        <StackPanel Margin="0,12,0,0">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
+                                                <DataGrid ItemsSource="{Binding PurchasedItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1250" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
+                                                        <DataGridTextColumn Header="INVOICE #" Binding="{Binding InvoiceNumber}" Width="140" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="130"/>
+                                                        <DataGridTextColumn Header="ITEM CODE" Binding="{Binding ItemCode}" Width="120" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="ITEM NAME" Binding="{Binding ItemName}" Width="240" FontWeight="SemiBold"/>
+                                                        <DataGridTextColumn Header="QTY" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}" Width="90"/>
+                                                        <DataGridTextColumn Header="UNIT" Binding="{Binding Unit}" Width="80"/>
+                                                        <DataGridTextColumn Header="UNIT PRICE" Binding="{Binding UnitPrice, StringFormat='PKR {0:N0}'}" Width="120"/>
+                                                        <DataGridTextColumn Header="TOTAL AMOUNT" Binding="{Binding TotalAmount, StringFormat='PKR {0:N0}'}" Width="140" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="PAID" Binding="{Binding PaidAmount, StringFormat='PKR {0:N0}'}" Width="120" Foreground="#16A34A"/>
+                                                        <DataGridTextColumn Header="OUTSTANDING" Binding="{Binding OutstandingBalance, StringFormat='PKR {0:N0}'}" Width="140" Foreground="#DC2626" FontWeight="Bold"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </ScrollViewer>
+
+                                            <!-- Grand Total Row -->
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0" Padding="12" Margin="0,8,0,0">
+                                                <DockPanel>
+                                                    <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding TotalPurchasedQty, StringFormat='Total Qty: {0:N0}'}" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding TotalPurchasedAmount, StringFormat='Total Amount: PKR {0:N0}'}" Foreground="#0F172A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding TotalPurchasedPaid, StringFormat='Total Paid: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding TotalPurchasedOutstanding, StringFormat='Outstanding: PKR {0:N0}'}" Foreground="#DC2626" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </TabItem>
+
+                                    <!-- TAB 2: PAYMENT & RECEIPT HISTORY -->
+                                    <TabItem Header="💳 Payment &amp; Receipt History">
+                                        <StackPanel Margin="0,12,0,0">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
+                                                <DataGrid ItemsSource="{Binding PaymentHistory}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
+                                                        <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="150" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="180" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="PAYMENT MODE" Binding="{Binding Mode}" Width="140"/>
+                                                        <DataGridTextColumn Header="AMOUNT RECEIVED" Binding="{Binding Amount, StringFormat='PKR {0:N0}'}" Width="170" Foreground="#16A34A" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="REF INVOICE" Binding="{Binding ReferenceInvoice}" Width="150"/>
+                                                        <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="250"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </ScrollViewer>
+
+                                            <!-- Grand Total Row -->
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0" Padding="12" Margin="0,8,0,0">
+                                                <DockPanel>
+                                                    <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding TotalPaymentHistoryAmount, StringFormat='Total Payments/Receipts Received: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                                </DockPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </TabItem>
+
+                                    <!-- TAB 3: OUTSTANDING BILLS & INVOICES -->
+                                    <TabItem Header="📄 Outstanding Bills &amp; Invoices">
+                                        <StackPanel Margin="0,12,0,0">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
+                                                <DataGrid ItemsSource="{Binding OutstandingInvoices}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1200" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="INVOICE DATE" Binding="{Binding InvoiceDate, StringFormat='yyyy-MM-dd'}" Width="140"/>
+                                                        <DataGridTextColumn Header="INVOICE #" Binding="{Binding InvoiceNumber}" Width="150" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="140"/>
+                                                        <DataGridTextColumn Header="PAYMENT TERMS" Binding="{Binding PaymentTerms}" Width="150"/>
+                                                        <DataGridTextColumn Header="TOTAL INVOICE" Binding="{Binding TotalAmount, StringFormat='PKR {0:N0}'}" Width="150" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="PAID AMOUNT" Binding="{Binding PaidAmount, StringFormat='PKR {0:N0}'}" Width="140" Foreground="#16A34A"/>
+                                                        <DataGridTextColumn Header="ADVANCE USED" Binding="{Binding AdvanceUsed, StringFormat='PKR {0:N0}'}" Width="140" Foreground="#2563EB"/>
+                                                        <DataGridTextColumn Header="BALANCE DUE" Binding="{Binding BalanceDue, StringFormat='PKR {0:N0}'}" Width="150" Foreground="#DC2626" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="STATUS" Binding="{Binding Status}" Width="130" FontWeight="Bold"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </ScrollViewer>
+
+                                            <!-- Grand Total Row -->
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0" Padding="12" Margin="0,8,0,0">
+                                                <DockPanel>
+                                                    <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding TotalOutstandingInvoiceAmount, StringFormat='Total Invoices: PKR {0:N0}'}" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding TotalOutstandingPaidAmount, StringFormat='Total Paid: PKR {0:N0}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding TotalOutstandingBalanceDue, StringFormat='Total Balance Due: PKR {0:N0}'}" Foreground="#DC2626" FontWeight="Bold"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </TabItem>
+
+                                    <!-- TAB 4: CUSTOMER LEDGER STATEMENT -->
+                                    <TabItem Header="📕 Full Customer Ledger Statement">
+                                        <StackPanel Margin="0,12,0,0">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
+                                                <DataGrid ItemsSource="{Binding CustomerLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
+                                                        <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="160" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="140"/>
+                                                        <DataGridTextColumn Header="DEBIT (+)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="140" Foreground="#DC2626"/>
+                                                        <DataGridTextColumn Header="CREDIT (-)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="140" Foreground="#16A34A"/>
+                                                        <DataGridTextColumn Header="RUNNING BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="160" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="250"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </ScrollViewer>
+
+                                            <!-- Grand Total Row -->
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,1,0,0" Padding="12" Margin="0,8,0,0">
+                                                <DockPanel>
+                                                    <TextBlock Text="GRAND TOTAL" FontWeight="Bold" Foreground="#0F172A" FontSize="12" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding LedgerTotalDebit, StringFormat='Total Debit: PKR {0:N2}'}" Foreground="#DC2626" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                        <TextBlock Text="{Binding LedgerTotalCredit, StringFormat='Total Credit: PKR {0:N2}'}" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,20,0"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </TabItem>
+                                </TabControl>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

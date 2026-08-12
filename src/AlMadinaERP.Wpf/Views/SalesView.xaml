@@ -1,0 +1,1173 @@
+<UserControl x:Class="AlMadinaERP.Wpf.Views.SalesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F8FAFC">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- ============================================================== -->
+        <!-- SUB-VIEW 1: SALE RETURN LIST VIEW (SCREENSHOT 1 MATCH)          -->
+        <!-- ============================================================== -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleReturnList">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
+
+            <StackPanel>
+                <!-- TOP HEADER -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Sale Return (Credit Note)" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="Record and track goods returned by customers." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding PrintSalesReturnListCommand}" Content="🖨️ Print List" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding OpenNewReturnFormCommand}" Content="+ New Return" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 3 STAT CARDS (SCREENSHOT 1 MATCH) -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEE2E2" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="🔄" Foreground="#DC2626" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TOTAL RETURNS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TotalReturnsCount}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#DCFCE7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="✅" Foreground="#16A34A" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="POSTED" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PostedReturnsCount}" Foreground="#16A34A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEF3C7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="⚠️" Foreground="#D97706" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="DRAFTS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DraftReturnsCount}" Foreground="#D97706" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
+                <!-- DATAGRID TABLE CONTAINER -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <!-- FILTER BAR -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="11" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,0"
+                                         ToolTip="Search by return # or customer name"/>
+                                <DatePicker Grid.Column="2" SelectedDate="{Binding FromDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center"/>
+                                <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="6" SelectedValue="{Binding StatusFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="30" FontSize="11" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="All" Tag="All" IsSelected="True"/>
+                                    <ComboBoxItem Content="Posted" Tag="Posted"/>
+                                    <ComboBoxItem Content="Draft" Tag="Draft"/>
+                                </ComboBox>
+                                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                                    <Button Command="{Binding SetTodayFilterCommand}" Content="Today" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding SetThisMonthFilterCommand}" Content="This Month" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding ClearDateFilterCommand}" Content="✕ Clear" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECACA" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Button Command="{Binding OpenNewReturnFormCommand}" Content="+ New Return" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Height="34" HorizontalAlignment="Right" Margin="0,0,0,10" Cursor="Hand"/>
+
+                        <DataGrid ItemsSource="{Binding SaleReturns}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="36">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="RETURN #" Binding="{Binding InvoiceNumber}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
+                                <DataGridTextColumn Header="CUSTOMER" Binding="{Binding CustomerName}" Width="*"/>
+                                <DataGridTextColumn Header="VEHICLE NO" Binding="{Binding VehicleNo}" Width="100"/>
+                                <DataGridTextColumn Header="INV (OFF)" Binding="{Binding AgainstInvoiceNo}" Width="100"/>
+                                <DataGridTextColumn Header="SALESMAN" Binding="{Binding Salesman}" Width="100"/>
+                                <DataGridTextColumn Header="LOCATION" Binding="{Binding Location}" Width="110"/>
+                                <DataGridTextColumn Header="EMPLOYEE" Binding="{Binding Employee}" Width="110"/>
+                                <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="120"/>
+                                <DataGridTextColumn Header="AMOUNT" Binding="{Binding TotalAmount, StringFormat='PKR {0:N0}'}" Width="110" FontWeight="Bold" Foreground="#DC2626"/>
+                                <DataGridTemplateColumn Header="STATUS" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#DCFCE7" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding Status}" Foreground="#15803D" FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="ACTIONS" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <Button Command="{Binding DataContext.ViewInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="👁️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#2563EB" BorderThickness="0" Cursor="Hand" ToolTip="View Details"/>
+                                                <Button Command="{Binding DataContext.PrintA4Command, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="🖨️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#059669" BorderThickness="0" Cursor="Hand" ToolTip="Print Return"/>
+                                                <Button Command="{Binding DataContext.EditInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="✏️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#D97706" BorderThickness="0" Cursor="Hand" ToolTip="Edit Return"/>
+                                                <Button Command="{Binding DataContext.DeleteInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="🗑️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand" ToolTip="Delete Return"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border Background="#0F172A" CornerRadius="6" Padding="12,10" Margin="0,12,0,0">
+                            <Grid>
+                                <TextBlock Foreground="#94A3B8" FontSize="11" FontWeight="Bold" VerticalAlignment="Center">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="GRAND TOTAL ({0} RETURNS)">
+                                            <Binding Path="TotalReturnsCount"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                                <TextBlock Text="{Binding GrandTotalReturns, StringFormat='PKR {0:N2}'}" Foreground="#38BDF8" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============================================================== -->
+        <!-- SUB-VIEW 2: RETURN SALES INVOICE FORM VIEW (SCREENSHOT 2 MATCH) -->
+        <!-- ============================================================== -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleReturnForm">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleInvoiceForm">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
+
+            <StackPanel>
+                <!-- TOP HEADER TOOLBAR -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding CloseSubViewCommand}" Content="← Back to List" Background="Transparent" Foreground="#2563EB" FontSize="12" FontWeight="Bold" BorderThickness="0" Margin="0,0,16,0" Cursor="Hand"/>
+                        <Button Content="+ New Customer" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Content="🏷️ New Item" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Content="✍️ Edit" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="11" FontWeight="SemiBold"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Border CornerRadius="12" Padding="10,4" Margin="0,0,12,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#DCFCE7"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                            <Setter Property="Background" Value="#FEE2E2"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="11" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="SALE INVOICE"/>
+                                        <Setter Property="Foreground" Value="#15803D"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                                <Setter Property="Text" Value="RETURNED"/>
+                                                <Setter Property="Foreground" Value="#DC2626"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <Button Command="{Binding SaveInvoiceDraftCommand}" Content="💾 Save Draft" Background="#78350F" Foreground="#FFFFFF" Padding="14,6" Margin="4,0" FontSize="11" FontWeight="Bold" Cursor="Hand"/>
+                        <Button Command="{Binding SaveInvoicePostedCommand}" Content="💾 Save &amp; Post" Background="#16A34A" Foreground="#FFFFFF" Padding="14,6" Margin="4,0" FontSize="11" FontWeight="Bold" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 2-COLUMN MAIN LAYOUT -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT FORM COLUMN -->
+                    <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                        <!-- CONTAINER 1: RETURN DETAILS -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock FontSize="11" FontWeight="Bold" Margin="0,0,0,12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="NEW SALE INVOICE"/>
+                                            <Setter Property="Foreground" Value="#0F172A"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                                    <Setter Property="Text" Value="RETURN SALES INVOICE"/>
+                                                    <Setter Property="Foreground" Value="#64748B"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="Serial # / Invoice #" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding NewInvoice.InvoiceNumber}" IsReadOnly="True" Background="#F1F5F9" Height="32"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="6,0,6,0">
+                                        <TextBlock Text="Date *" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <DatePicker SelectedDate="{Binding NewInvoice.Date}" Height="32"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                        <TextBlock Text="Ref / Against Inv #" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding NewInvoice.AgainstInvoiceNo}" Height="32"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="Vehicle No" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding NewInvoice.VehicleNo}" Height="32"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                        <TextBlock Text="Driver / KM" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding NewInvoice.DriverKm}" Height="32"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <RadioButton Content="Casual" IsChecked="True" Foreground="#334155" Margin="0,0,16,0"/>
+                                    <RadioButton Content="Wholesale" Foreground="#334155" Margin="0,0,16,0"/>
+                                    <RadioButton Content="Retail" Foreground="#334155" Margin="0,0,16,0"/>
+                                    <RadioButton Content="On Credit Bill" Foreground="#334155"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- CONTAINER 2: ITEMS DATAGRID -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,12">
+                                    <TextBlock FontSize="11" FontWeight="Bold" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="SALE INVOICE ITEMS"/>
+                                                <Setter Property="Foreground" Value="#0F172A"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                                        <Setter Property="Text" Value="RETURNED ITEMS"/>
+                                                        <Setter Property="Foreground" Value="#64748B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding NewInvoice.Items}" AutoGenerateColumns="False" CanUserAddRows="False" EnableRowVirtualization="False" EnableColumnVirtualization="False" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" RowHeight="40" MinHeight="180" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="ITEM CODE" Width="110">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding ItemCode}" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="6,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="DESCRIPTION" Width="280">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <ComboBox ItemsSource="{Binding DataContext.AvailableItems, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                              SelectedItem="{Binding Item, UpdateSourceTrigger=PropertyChanged}"
+                                                              DisplayMemberPath="Name"
+                                                              IsEditable="True"
+                                                              IsTextSearchEnabled="True"
+                                                              IsTextSearchCaseSensitive="False"
+                                                              StaysOpenOnEdit="True"
+                                                              Height="32"
+                                                              FontSize="12"
+                                                              Foreground="#0F172A">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="4,2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                                                                        <TextBlock Text="{Binding Code, StringFormat='Code: {0}'}" FontSize="10" Foreground="#64748B"/>
+                                                                    </StackPanel>
+                                                                    <Border Grid.Column="1" Background="#ECFDF5" CornerRadius="4" Padding="6,2" Margin="8,0" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding BaseUnit}" Foreground="#047857" FontSize="10" FontWeight="Bold"/>
+                                                                    </Border>
+                                                                    <TextBlock Grid.Column="2" Text="{Binding SalePrice, StringFormat='Rs. {0:N0}'}" FontWeight="Bold" Foreground="#1D4ED8" FontSize="11" VerticalAlignment="Center"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="UNIT PRICE (PKR)" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding Rate, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="12" Foreground="#0F172A" Padding="4,0" FontWeight="SemiBold"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="ORDERED QTY" Width="90">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="12" Foreground="#0F172A" Padding="4,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="UNIT" Width="90">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding UnitName, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="12" Foreground="#0F172A" Padding="4,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="REMARKS / REASON" Width="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="12" Foreground="#0F172A" Padding="4,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="STATUS" Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsReceived, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" HorizontalAlignment="Center" Cursor="Hand">
+                                                        <CheckBox.Style>
+                                                            <Style TargetType="CheckBox">
+                                                                <Setter Property="Content" Value="Received ✓"/>
+                                                                <Setter Property="Foreground" Value="#16A34A"/>
+                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                <Setter Property="FontSize" Value="11"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsReceived}" Value="False">
+                                                                        <Setter Property="Content" Value="Not Received ✗"/>
+                                                                        <Setter Property="Foreground" Value="#DC2626"/>
+                                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </CheckBox.Style>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="TOTAL (PKR)" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding TotalPrice, StringFormat='{}{0:N2}'}" FontWeight="Bold" Foreground="#0F172A" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="ACTION" Width="60">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.RemoveLineItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="🗑️" Background="Transparent" Foreground="#DC2626" FontSize="16" BorderThickness="0" Cursor="Hand" ToolTip="Remove Row"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- + ADD NEW ROW LINK (IMAGE 3 MATCH) -->
+                                <Button Command="{Binding AddLineItemCommand}" Content="⊕ ADD NEW ROW" Background="Transparent" Foreground="#2563EB" FontWeight="Bold" FontSize="11" HorizontalAlignment="Left" Margin="0,8,0,0" BorderThickness="0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- CONTAINER 3: LOCATION, REMARKS & AMOUNT IN WORDS (IMAGE 4 MATCH) -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                        <TextBlock Text="Location" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <ComboBox Text="{Binding NewInvoice.Location}" SelectedIndex="0" Height="32" Margin="0,4,0,0">
+                                            <ComboBoxItem Content="Main Warehouse"/>
+                                            <ComboBoxItem Content="Godown A"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Remarks" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding NewInvoice.Remarks}" Height="32" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,6,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="AMOUNT IN WORDS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding NewInvoice.AmountInWords}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" FontStyle="Italic" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- RIGHT SIDEBAR COLUMN -->
+                    <StackPanel Grid.Column="1">
+                        <!-- CUSTOMER PANEL (SCREENSHOT 2 & IMAGE 2 MATCH) -->
+                        <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="CUSTOMER PANEL" Foreground="#92400E" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" DisplayMemberPath="Name" Height="32" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding SelectedCustomer.Name, FallbackValue='Walk-in (Cash) Customer'}" Foreground="#78350F" FontSize="13" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedCustomer.Phone, StringFormat='Phone: {0}', FallbackValue='Phone: N/A'}" Foreground="#B45309" FontSize="11" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding SelectedCustomer.Address, StringFormat='Address: {0}', FallbackValue='Address: Uthal'}" Foreground="#B45309" FontSize="11" Margin="0,2,0,0"/>
+                                <Border BorderBrush="#FCD34D" BorderThickness="0,1,0,0" Margin="0,8,0,8"/>
+                                <Grid Margin="0,2">
+                                    <TextBlock Text="LIMIT" Foreground="#92400E" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="PKR 0" Foreground="#92400E" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,2">
+                                    <TextBlock Text="OUTSTANDING" Foreground="#92400E" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding SelectedCustomer.OwesAmount, StringFormat='PKR {0:N2}', FallbackValue='0.00'}" Foreground="#DC2626" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <Border Background="#E0F2FE" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,6,0,0">
+                                    <Grid>
+                                        <TextBlock Text="ADVANCE BALANCE" Foreground="#0369A1" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedCustomer.AdvanceAvailable, StringFormat='PKR {0:N2}', FallbackValue='0.00'}" Foreground="#0284C7" FontSize="13" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- DARK SUMMARY BOX (IMAGE 4 MATCH) -->
+                        <Border Background="#0F172A" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <TextBlock FontSize="11" FontWeight="Bold" Margin="0,0,0,12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="INVOICE SUMMARY"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                                    <Setter Property="Text" Value="REFUND SUMMARY"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="GROSS TOTAL" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding NewInvoice.Subtotal, StringFormat='{}{0:N2}'}" Foreground="#FFFFFF" FontWeight="Bold" HorizontalAlignment="Right" FontSize="13"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="VEHICLE CHARGES (+)" Foreground="#38BDF8" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewInvoice.VehicleCharges, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="EXPENSES (+)" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewInvoice.ExtraCharges, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="DISCOUNT (-)" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewInvoice.AdditionalDiscount, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
+                                </Grid>
+                                
+                                <Border BorderBrush="#334155" BorderThickness="0,1,0,0" Margin="0,10,0,10"/>
+                                
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="NET TOTAL" Foreground="#FACC15" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding NewInvoice.TotalAmount, StringFormat='{}{0:N2}'}" Foreground="#FACC15" FontWeight="Bold" FontSize="20" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="AMOUNT RECEIVED" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewInvoice.PaidAmount, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="BALANCE DUE" Foreground="#EF4444" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding NewInvoice.BalanceDue, StringFormat='{}{0:N2}'}" Foreground="#EF4444" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- PROMINENT BOTTOM SAVE ACTION BUTTONS -->
+                                <Grid Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Command="{Binding SaveInvoiceDraftCommand}" Content="💾 SAVE DRAFT" Background="#78350F" Foreground="#FFFFFF" Padding="12,12" Margin="0,0,6,0" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
+                                    <Button Grid.Column="1" Command="{Binding SaveInvoicePostedCommand}" Content="💾 SAVE &amp; POST" Background="#16A34A" Foreground="#FFFFFF" Padding="12,12" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============================================================== -->
+        <!-- SUB-VIEW 3: POS COUNTER SALE LIST VIEW (SCREENSHOT 3 MATCH)    -->
+        <!-- ============================================================== -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="PosList">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
+
+            <StackPanel>
+                <!-- TOP HEADER -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="POS Counter Sale" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="Fast retail checkout for walk-in customers." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding OpenNewPosTerminalCommand}" Content="+ NEW SALE" Background="#059669" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 4 STAT CARDS (SCREENSHOT 3 MATCH) -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEE2E2" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="🛒" Foreground="#DC2626" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TODAY'S SALES" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TodayPosSalesCount}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#ECFDF5" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="💵" Foreground="#059669" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TOTAL CASH" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TotalPosCash, StringFormat='Rs.{0:N0}'}" Foreground="#059669" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="✅" Foreground="#2563EB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="COMPLETED" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding CompletedPosCount}" Foreground="#2563EB" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEF3C7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="⏱️" Foreground="#D97706" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="DRAFTS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DraftPosCount}" Foreground="#D97706" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
+                <!-- POS DATAGRID CONTAINER -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <!-- FILTER BAR -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="11" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,0"/>
+                                <DatePicker Grid.Column="2" SelectedDate="{Binding FromDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center"/>
+                                <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="6" SelectedValue="{Binding StatusFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="30" FontSize="11" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="All" Tag="All" IsSelected="True"/>
+                                    <ComboBoxItem Content="Completed" Tag="Completed"/>
+                                    <ComboBoxItem Content="Draft" Tag="Draft"/>
+                                </ComboBox>
+                                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                                    <Button Command="{Binding SetTodayFilterCommand}" Content="Today" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding SetThisMonthFilterCommand}" Content="This Month" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding ClearDateFilterCommand}" Content="✕ Clear" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECACA" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Button Command="{Binding OpenNewPosTerminalCommand}" Content="+ NEW SALE" Background="#059669" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Height="34" HorizontalAlignment="Right" Margin="0,0,0,10" Cursor="Hand"/>
+
+                        <DataGrid ItemsSource="{Binding PosSales}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="36">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="RECEIPT #" Binding="{Binding InvoiceNumber}" Width="130" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="DATE &amp; TIME" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="140"/>
+                                <DataGridTextColumn Header="CUSTOMER" Binding="{Binding CustomerName}" Width="*"/>
+                                <DataGridTextColumn Header="PAYMENT" Binding="{Binding PaymentTerms}" Width="100"/>
+                                <DataGridTextColumn Header="TOTAL (PKR)" Binding="{Binding TotalAmount, StringFormat='Rs.{0:N0}'}" Width="120" FontWeight="Bold"/>
+                                <DataGridTemplateColumn Header="STATUS" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#DCFCE7" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding Status}" Foreground="#15803D" FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="ACTIONS" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Command="{Binding DataContext.PrintThermalCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🖨️" Padding="2" Background="Transparent" Foreground="#2563EB" BorderThickness="0" Cursor="Hand"/>
+                                                <Button Command="{Binding DataContext.DeleteInvoiceCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============================================================== -->
+        <!-- SUB-VIEW 4: POS TERMINAL INTERFACE (SCREENSHOT 4 MATCH)        -->
+        <!-- ============================================================== -->
+        <Grid Margin="16">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="PosTerminal">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="340"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT ITEMS TILES GRID -->
+            <DockPanel Grid.Column="0" Margin="0,0,16,0">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding CloseSubViewCommand}" Content="← Back to List" Background="Transparent" Foreground="#2563EB" FontSize="12" FontWeight="Bold" BorderThickness="0" Margin="0,0,16,0" Cursor="Hand"/>
+                        <TextBlock Text="POS Checkout Terminal" FontSize="18" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="280" Height="34" HorizontalAlignment="Right" VerticalContentAlignment="Center"/>
+                </Grid>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AvailableItems}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.AddPosItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" Padding="14" Margin="6" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="📦" FontSize="28" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                                                    <TextBlock Text="{Binding Name}" Foreground="#0F172A" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Code}" Foreground="#64748B" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,4"/>
+                                                    <TextBlock Text="{Binding SalePrice, StringFormat='Rs. {0:N0}'}" Foreground="#DC2626" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- RIGHT CART & PAY PANEL (SCREENSHOT 4 MATCH) -->
+            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Current Order Cart" Foreground="#0F172A" FontSize="14" FontWeight="Bold" Margin="0,0,0,12"/>
+
+                    <!-- Pay Footer -->
+                    <Border DockPanel.Dock="Bottom" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,12,0,0">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="TOTAL AMOUNT" Foreground="#7A0C0C" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding NewInvoice.TotalAmount, StringFormat='Rs. {0:N0}'}" Foreground="#7A0C0C" FontSize="22" FontWeight="Bold" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Button Command="{Binding SaveInvoicePostedCommand}" Content="⚡ PAY &amp; PRINT RECEIPT" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" FontSize="13" Padding="0,12" Cursor="Hand"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cart DataGrid -->
+                    <DataGrid ItemsSource="{Binding NewInvoice.Items}" AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" RowHeight="34">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ITEM" Binding="{Binding ItemName}" Width="*"/>
+                            <DataGridTextColumn Header="QTY" Binding="{Binding Quantity}" Width="50"/>
+                            <DataGridTextColumn Header="TOTAL" Binding="{Binding TotalPrice, StringFormat='Rs. {0:N0}'}" Width="70" FontWeight="Bold"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- SUB-VIEW 5: SALE INVOICE LIST VIEW (DEFAULT SCREENSHOT 13)      -->
+        <!-- ============================================================== -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleReturnList">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleReturnForm">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="PosList">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="PosTerminal">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ActiveSubView}" Value="SaleInvoiceForm">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
+
+            <StackPanel>
+                <Grid Margin="0,0,0,16">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Sale Invoice" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="Manage customer invoices and sales payments" Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding PrintSalesListCommand}" Content="🖨️ Print List" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding OpenCreateInvoiceCommand}" Content="+ New Invoice" Background="#7A0C0C" Foreground="#FFFFFF" Padding="14,6" Margin="3" FontSize="12" FontWeight="Bold" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEE2E2" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="📄" Foreground="#DC2626" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TOTAL INVOICES" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TotalInvoicesCount}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#DCFCE7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="⏱️" Foreground="#16A34A" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="FULLY PAID" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding FullyPaidCount}" Foreground="#16A34A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="💳" Foreground="#2563EB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="POSTED" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PostedCount}" Foreground="#2563EB" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Background="#FEF3C7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="⏱️" Foreground="#D97706" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="DRAFTS" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DraftsCount}" Foreground="#D97706" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <!-- FILTER BAR -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="11" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,0"
+                                         ToolTip="Search by invoice number or customer name"/>
+                                <DatePicker Grid.Column="2" SelectedDate="{Binding FromDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center" ToolTip="From Date"/>
+                                <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate, Mode=TwoWay}" Height="30" FontSize="11" VerticalAlignment="Center" ToolTip="To Date"/>
+                                <ComboBox Grid.Column="6" SelectedValue="{Binding StatusFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="30" FontSize="11" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="All" Tag="All" IsSelected="True"/>
+                                    <ComboBoxItem Content="Posted" Tag="Posted"/>
+                                    <ComboBoxItem Content="Draft" Tag="Draft"/>
+                                    <ComboBoxItem Content="Paid" Tag="Paid"/>
+                                </ComboBox>
+                                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                                    <Button Command="{Binding SetTodayFilterCommand}" Content="Today" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding SetThisMonthFilterCommand}" Content="This Month" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding ClearDateFilterCommand}" Content="✕ Clear" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECACA" BorderThickness="1" Padding="8,4" Margin="2,0" FontSize="10" FontWeight="SemiBold" Height="30" Cursor="Hand"/>
+                                    <Button Command="{Binding OpenCreateInvoiceCommand}" Content="+ New Invoice" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,4" Margin="8,0,0,0" FontSize="10" Height="30" Cursor="Hand"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <DataGrid ItemsSource="{Binding Invoices}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="36">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="INVOICE #" Binding="{Binding InvoiceNumber}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
+                                <DataGridTextColumn Header="CUSTOMER" Binding="{Binding CustomerName}" Width="*"/>
+                                <DataGridTextColumn Header="TOTAL" Binding="{Binding TotalAmount, StringFormat='PKR {0:N0}'}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="PAID" Binding="{Binding PaidAmount, StringFormat='PKR {0:N0}'}" Width="110"/>
+                                <DataGridTemplateColumn Header="STATUS" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#DCFCE7" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                                <TextBlock Text="{Binding Status}" Foreground="#15803D" FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="ACTIONS" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <Button Command="{Binding DataContext.ViewInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="👁️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#2563EB" BorderThickness="0" Cursor="Hand" ToolTip="View Details"/>
+                                                <Button Command="{Binding DataContext.PrintA4Command, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="🖨️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#059669" BorderThickness="0" Cursor="Hand" ToolTip="Print Invoice"/>
+                                                <Button Command="{Binding DataContext.EditInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="✏️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#D97706" BorderThickness="0" Cursor="Hand" ToolTip="Edit Invoice"/>
+                                                <Button Command="{Binding DataContext.DeleteInvoiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Content="🗑️" Padding="3,1" Margin="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand" ToolTip="Delete Invoice"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- VIEW INVOICE DETAILS MODAL (IMAGE 2 MATCH) -->
+        <Grid Visibility="{Binding IsViewInvoiceModalOpen, Converter={StaticResource BooleanToVisibilityConverter}}" Background="#80000000">
+            <Border Background="#F8FAFC" Width="850" MaxHeight="680" CornerRadius="12" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel DataContext="{Binding SelectedViewInvoice}">
+                        <!-- MODAL HEADER -->
+                        <DockPanel Margin="0,0,0,16">
+                            <TextBlock Text="Invoice Details" FontSize="20" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                            <Button Command="{Binding DataContext.CloseViewInvoiceModalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" Content="✖" Background="Transparent" Foreground="#64748B" FontSize="16" FontWeight="Bold" BorderThickness="0" DockPanel.Dock="Right" Cursor="Hand"/>
+                        </DockPanel>
+
+                        <!-- 4 TOP CARDS (IMAGE 2 MATCH) -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL AMOUNT" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding TotalAmount, StringFormat='PKR {0:N2}'}" Foreground="#0F172A" FontSize="18" FontWeight="Bold" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="BALANCE DUE" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding OutstandingAmount, StringFormat='PKR {0:N2}'}" Foreground="#16A34A" FontSize="18" FontWeight="Bold" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="INVOICE DATE" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Date, StringFormat='dd/MM/yyyy'}" Foreground="#0F172A" FontSize="16" FontWeight="Bold" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="DUE DATE" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Date, StringFormat='dd/MM/yyyy'}" Foreground="#0F172A" FontSize="16" FontWeight="Bold" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- BILLING INFORMATION CARD (IMAGE 2 MATCH) -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <Border BorderBrush="#7A0C0C" BorderThickness="3,0,0,0" Padding="8,0,0,0" Margin="0,0,0,14">
+                                    <TextBlock Text="BILLING INFORMATION" Foreground="#475569" FontSize="11" FontWeight="Bold"/>
+                                </Border>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="CUSTOMER" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding DisplayCustomerName}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="TERMS" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SaleCategory, FallbackValue='Cash'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="VEHICLE NO" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding VehicleNo, FallbackValue='-'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="3">
+                                        <TextBlock Text="DRIVER / KMS" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding DriverKm, FallbackValue='0/0/0'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="LOCATION" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Location, FallbackValue='Main Warehouse'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="SALES PERSON" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Salesman, FallbackValue='Admin'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="OIL GAUGE LIMIT" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="0" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="3">
+                                        <TextBlock Text="REMARKS" Foreground="#94A3B8" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Remarks, FallbackValue='-'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- INVOICE ITEMS CARD (IMAGE 2 MATCH) -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="INVOICE ITEMS" Foreground="#475569" FontSize="11" FontWeight="Bold" Margin="0,0,0,12"/>
+
+                                <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" MinHeight="150">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding ItemId}" Width="40"/>
+                                        <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding ItemName}" Width="*"/>
+                                        <DataGridTemplateColumn Header="STATUS" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold" FontSize="11">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="Received ✓"/>
+                                                                <Setter Property="Foreground" Value="#16A34A"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsReceived}" Value="False">
+                                                                        <Setter Property="Text" Value="Not Received ✗"/>
+                                                                        <Setter Property="Foreground" Value="#DC2626"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="CARTONS / QTY" Binding="{Binding Quantity}" Width="110"/>
+                                        <DataGridTextColumn Header="RATE" Binding="{Binding Rate, StringFormat='{}{0:N2}'}" Width="100"/>
+                                        <DataGridTextColumn Header="GROSS AMT" Binding="{Binding TotalPrice, StringFormat='{}{0:N2}'}" Width="110"/>
+                                        <DataGridTextColumn Header="DISC %" Binding="{Binding DiscountPercent, StringFormat='{}{0:N0}%'}" Width="80"/>
+                                        <DataGridTextColumn Header="NET AMOUNT" Binding="{Binding TotalPrice, StringFormat='{}{0:N2}'}" Width="120" FontWeight="Bold"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <StackPanel HorizontalAlignment="Right" Margin="0,16,0,0" Width="260">
+                                    <DockPanel Margin="0,2">
+                                        <TextBlock Text="SUBTOTAL (GROSS)" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Subtotal, StringFormat='{}{0:N2}'}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,4">
+                                        <TextBlock Text="INVOICE TOTAL (PKR)" Foreground="#7A0C0C" FontSize="12" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalAmount, StringFormat='{}{0:N2}'}" Foreground="#7A0C0C" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ACTION BUTTONS -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Command="{Binding DataContext.PrintA4Command, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Path=SelectedViewInvoice, RelativeSource={RelativeSource AncestorType=UserControl}}" Content="📄 Print A4 Invoice" Background="#7A0C0C" Foreground="#FFFFFF" Padding="14,8" Margin="0,0,8,0" FontWeight="Bold" Cursor="Hand"/>
+                            <Button Command="{Binding DataContext.PrintThermalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Path=SelectedViewInvoice, RelativeSource={RelativeSource AncestorType=UserControl}}" Content="🧾 Print Thermal Receipt" Background="#0F172A" Foreground="#FFFFFF" Padding="14,8" Margin="0,0,8,0" FontWeight="Bold" Cursor="Hand"/>
+                            <Button Command="{Binding DataContext.CloseViewInvoiceModalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" Content="Close" Background="#E2E8F0" Foreground="#334155" Padding="14,8" FontWeight="Bold" Cursor="Hand"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

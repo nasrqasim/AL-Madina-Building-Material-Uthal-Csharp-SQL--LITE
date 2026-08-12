@@ -1,0 +1,197 @@
+<UserControl x:Class="AlMadinaERP.Wpf.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F8FAFC">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+        <StackPanel>
+            <!-- TOP HERO BANNER (Dark Maroon Background matching Image 4) -->
+            <Border Background="#800000" CornerRadius="12" Padding="20,16" Margin="0,0,0,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="240"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Time, Date & Greeting -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentTime}" Foreground="#FFFFFF" FontSize="32" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CurrentDayDate}" Foreground="#FDE047" FontSize="11" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                        <TextBlock Text="Good Afternoon," Foreground="#E2E8F0" FontSize="12" Margin="0,8,0,0"/>
+                        <TextBlock Text="Administrator!" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <!-- Middle: Business Health Badge Card -->
+                    <Border Grid.Column="1" Background="#5B0606" CornerRadius="10" Padding="14,10" Margin="10,0">
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Border Width="46" Height="46" CornerRadius="23" Background="#991B1B" BorderBrush="#F59E0B" BorderThickness="3" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Summary.BusinessHealthScore}" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="BUSINESS HEALTH" Foreground="#9CA3AF" FontSize="10" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Summary.HealthStatus}" Foreground="#F59E0B" FontSize="18" FontWeight="Bold"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Text="Health Score Breakdown: 48/100" Foreground="#CBD5E1" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Right: Quick Actions & Search Bar -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <!-- Action Buttons Row -->
+                        <WrapPanel HorizontalAlignment="Right" Margin="0,0,0,10">
+                            <Button Content="🖨️ Print Summary" Command="{Binding PrintDashboardSummaryCommand}" Background="#F59E0B" Foreground="#FFFFFF" FontWeight="Bold" Padding="12,6" Margin="3" Cursor="Hand"/>
+                            <Button Content="+ New Sale" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="SaleInvoice" Background="#FFFFFF" Foreground="#800000" FontWeight="Bold" Padding="12,6" Margin="3" Cursor="Hand"/>
+                            <Button Content="🛒 Purchase" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="PurchaseInvoice" Background="#991B1B" Foreground="#FFFFFF" Padding="10,6" Margin="3" Cursor="Hand"/>
+                            <Button Content="📊 Reports" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Reports" Background="#991B1B" Foreground="#FFFFFF" Padding="10,6" Margin="3" Cursor="Hand"/>
+                        </WrapPanel>
+
+                        <!-- Search Bar -->
+                        <Border Background="#5B0606" CornerRadius="6" Padding="10,4" HorizontalAlignment="Right" Width="280">
+                            <Grid>
+                                <TextBlock Text="🔍 Search anything... (Ctrl+K)" Foreground="#9CA3AF" FontSize="12" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- MIDDLE BAR: TROUBLE SHOOTING REPORT & DATE NAVIGATOR -->
+            <Border Background="#FFFFFF" CornerRadius="8" Padding="16,12" Margin="0,0,0,20" BorderBrush="#E2E8F0" BorderThickness="1">
+                <Grid>
+                    <TextBlock Text="TROUBLE SHOOTING REPORT" Foreground="#1E293B" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="&lt;&lt;" Width="32" Padding="0" Margin="2" Background="#E2E8F0" Foreground="#1E293B"/>
+                        <Border Background="#F1F5F9" CornerRadius="4" Padding="12,4" Margin="4,0">
+                            <TextBlock Text="{Binding SelectedDate}" Foreground="#0F172A" FontSize="12" FontWeight="Bold"/>
+                        </Border>
+                        <Button Content="&gt;&gt;" Width="32" Padding="0" Margin="2" Background="#E2E8F0" Foreground="#1E293B"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 3 MAIN COLOR-CODED STAT CARDS (Image 4 Columns) -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- CARD 1: TOTAL CASH & BANK (Emerald Teal #059669) -->
+                <Border Grid.Column="0" Background="#059669" CornerRadius="12" Padding="18">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                            <TextBlock Text="TOTAL CASH &amp; BANK" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock Text="💲" Foreground="#A7F3D0" FontSize="16" HorizontalAlignment="Right"/>
+                        </DockPanel>
+
+                        <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="ReceiptsPayments" Background="#047857" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
+
+                        <StackPanel>
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Opening Cash/Bank:" Foreground="#D1FAE5" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.OpeningCashBank, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Cash Received Today (+):" Foreground="#D1FAE5" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.CashReceivedToday, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Cash Paid Today (-):" Foreground="#D1FAE5" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.CashPaidToday, StringFormat='- Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Separator Background="#34D399" Margin="0,10"/>
+
+                            <TextBlock Text="CURRENT CASH/BANK BALANCE" Foreground="#D1FAE5" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding Summary.CurrentCashBankBalance, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="22" FontWeight="Bold" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- CARD 2: CUSTOMER RECEIVABLES (Royal Blue #2563EB) -->
+                <Border Grid.Column="2" Background="#2563EB" CornerRadius="12" Padding="18">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                            <TextBlock Text="CUSTOMER RECEIVABLES" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock Text="↙" Foreground="#BFDBFE" FontSize="16" HorizontalAlignment="Right"/>
+                        </DockPanel>
+
+                        <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="CustomerBalances" Background="#1D4ED8" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
+
+                        <StackPanel>
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Opening Receivables:" Foreground="#DBEAFE" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.OpeningReceivables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Sales Today (+):" Foreground="#DBEAFE" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.SalesToday, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Received Today (-):" Foreground="#DBEAFE" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.ReceivedToday, StringFormat='- Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Separator Background="#60A5FA" Margin="0,10"/>
+
+                            <TextBlock Text="TOTAL CUSTOMER RECEIVABLES" Foreground="#DBEAFE" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding Summary.TotalCustomerReceivables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="22" FontWeight="Bold" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- CARD 3: VENDOR PAYABLES (Vibrant Rose Crimson #E11D48) -->
+                <Border Grid.Column="4" Background="#E11D48" CornerRadius="12" Padding="18">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                            <TextBlock Text="VENDOR PAYABLES" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock Text="↗" Foreground="#FECDD3" FontSize="16" HorizontalAlignment="Right"/>
+                        </DockPanel>
+
+                        <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="VendorBalances" Background="#BE123C" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
+
+                        <StackPanel>
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Opening Payables:" Foreground="#FFE4E6" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.OpeningPayables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Purchases Today (+):" Foreground="#FFE4E6" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.PurchasesToday, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Paid Today (-):" Foreground="#FFE4E6" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.PaidToday, StringFormat='- Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Separator Background="#F43F5E" Margin="0,10"/>
+
+                            <TextBlock Text="TOTAL VENDOR PAYABLES" Foreground="#FFE4E6" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding Summary.TotalVendorPayables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="22" FontWeight="Bold" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- FOOTER BAR -->
+            <Border Background="#FFFFFF" CornerRadius="8" Padding="16,10" BorderBrush="#E2E8F0" BorderThickness="1">
+                <Grid>
+                    <TextBlock Text="{Binding Summary.FinancialYear, StringFormat='Financial Year: {0}'}" Foreground="#64748B" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="© 2026 All Rights Reserved | Powered by Roonjha Developer" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

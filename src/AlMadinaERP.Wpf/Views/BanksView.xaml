@@ -1,0 +1,262 @@
+<UserControl x:Class="AlMadinaERP.Wpf.Views.BanksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F8FAFC">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <!-- MAIN BANK ACCOUNTS LIST (Screenshot 8 Match) -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+            <StackPanel>
+                <!-- TOP HEADER -->
+                <Grid Margin="0,0,0,16">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Bank Accounts" Foreground="#0F172A" FontSize="22" FontWeight="Bold"/>
+                        <TextBlock Text="Master Data / Banks" Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Top Action Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="🖨️ Print List" Command="{Binding PrintBankListCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="12,6" Margin="3" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- SEARCH & NEW BANK BAR -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,16">
+                    <Grid>
+                        <TextBox Text="{Binding BankSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="380" HorizontalAlignment="Left" Padding="10,6" Margin="0"/>
+                        <Button Content="+ NEW BANK" Command="{Binding OpenAddBankModalCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="18,8" HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+
+                <!-- BANK ACCOUNTS DATAGRID TABLE (Screenshot 8 Match) -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                    <DataGrid ItemsSource="{Binding Banks}" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" Foreground="#0F172A" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="420">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="BANK" Binding="{Binding BankName}" Width="160" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="ACCOUNT NUMBER" Binding="{Binding AccountNumber}" Width="180"/>
+                            <DataGridTextColumn Header="ACCOUNT TITLE" Binding="{Binding AccountName}" Width="*"/>
+                            <DataGridTemplateColumn Header="TYPE" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#ECFDF5" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left">
+                                            <TextBlock Text="{Binding AccountType, FallbackValue='CURRENT ACCOUNT'}" Foreground="#047857" FontSize="11" FontWeight="Bold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="CURRENT BALANCE" Binding="{Binding CurrentBalance, StringFormat='Rs. {0:N0}'}" Width="160" FontWeight="Bold" Foreground="#059669"/>
+                            <DataGridTemplateColumn Header="STATUS" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#DCFCE7" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                            <TextBlock Text="ACTIVE" Foreground="#15803D" FontSize="10" FontWeight="Bold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="ACTIONS" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="👁️" Command="{Binding DataContext.ViewBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand" ToolTip="View Bank Details"/>
+                                            <Button Content="✏️" Command="{Binding DataContext.EditBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Cursor="Hand" ToolTip="Edit Bank Account"/>
+                                            <Button Content="🗑️" Command="{Binding DataContext.DeleteBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECDD3" BorderThickness="1" Cursor="Hand" ToolTip="Delete Bank Account"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ADD BANK ACCOUNT MODAL FORM (Screenshot 9 100% Match) -->
+        <Grid Background="#80000000" Visibility="{Binding IsAddBankModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="640" MaxHeight="750" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <!-- Header -->
+                    <Border DockPanel.Dock="Top" Padding="20,16" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <TextBlock Text="Add Bank Account" Foreground="#0F172A" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button Content="✕" Command="{Binding CloseAddBankModalCommand}" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Footer Actions -->
+                    <Border DockPanel.Dock="Bottom" Background="#F8FAFC" Padding="20,14" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Cancel" Command="{Binding CloseAddBankModalCommand}" Background="Transparent" Foreground="#64748B" Padding="16,8" Margin="0,0,10,0"/>
+                            <Button Content="💾 Create" Command="{Binding SaveBankCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="20,8"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Scrollable Form Fields -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+                        <StackPanel>
+                            <!-- SECTION 1: BANK INFORMATION -->
+                            <TextBlock Text="BANK INFORMATION" Foreground="#0F172A" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="BANK NAME *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.BankName}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="BRANCH NAME" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.Branch}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="BRANCH CODE" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.BranchCode}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="ACCOUNT TYPE *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <ComboBox Text="{Binding NewBank.AccountType}" SelectedIndex="0" Height="36">
+                                        <ComboBoxItem Content="Current Account"/>
+                                        <ComboBoxItem Content="Savings Account"/>
+                                        <ComboBoxItem Content="Overdraft Account"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- SECTION 2: ACCOUNT DETAILS -->
+                            <Separator Background="#E2E8F0" Margin="0,4,0,12"/>
+                            <TextBlock Text="ACCOUNT DETAILS" Foreground="#0F172A" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="ACCOUNT NUMBER *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.AccountNumber}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="ACCOUNT TITLE *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.AccountName}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="IBAN" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.IBAN}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="SWIFT CODE" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewBank.SwiftCode}" Padding="10,8" Background="#F8FAFC"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- OPENING / CURRENT BALANCE (Requested in prompt) -->
+                            <TextBlock Text="OPENING / CURRENT BALANCE (PKR) *" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewBank.CurrentBalance, StringFormat='{}{0:0.00}'}" Margin="0,0,0,16" Padding="10,8" Background="#F0FDF4" BorderBrush="#BBF7D0" FontWeight="Bold"/>
+
+                            <!-- SECTION 3: SETTINGS -->
+                            <Separator Background="#E2E8F0" Margin="0,4,0,12"/>
+                            <TextBlock Text="SETTINGS" Foreground="#0F172A" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="STATUS" Foreground="#7A0C0C" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <ComboBox SelectedIndex="0" Height="36">
+                                        <ComboBoxItem Content="Active"/>
+                                        <ComboBoxItem Content="Inactive"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <CheckBox Grid.Column="2" IsChecked="{Binding NewBank.IsDefault}" Content="Use as default for payments" Foreground="#475569" FontSize="11" VerticalAlignment="Center" Margin="0,18,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <!-- VIEW BANK ACCOUNT MODAL DIALOG -->
+        <Grid Background="#80000000" Visibility="{Binding IsViewBankModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="520" VerticalAlignment="Center" Padding="24" BorderBrush="#CBD5E1" BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="Bank Account Details" Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
+                        <Button Command="{Binding CloseViewBankModalCommand}" Content="✕" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" Padding="4,0" Cursor="Hand"/>
+                    </Grid>
+
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="BANK CODE:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedBankForView.Code}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,4"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="BANK NAME:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedBankForView.BankName}" Foreground="#0F172A" FontSize="12" FontWeight="Bold" Margin="0,4"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="ACCOUNT NUMBER:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedBankForView.AccountNumber}" Foreground="#0F172A" FontSize="12" Margin="0,4"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="ACCOUNT TITLE:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedBankForView.AccountName}" Foreground="#0F172A" FontSize="12" Margin="0,4"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="ACCOUNT TYPE:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedBankForView.AccountType, FallbackValue='Current Account'}" Foreground="#047857" FontSize="12" FontWeight="Bold" Margin="0,4"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="CURRENT BALANCE:" Foreground="#64748B" FontSize="11" FontWeight="Bold" Margin="0,4"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedBankForView.CurrentBalance, StringFormat='PKR {0:N2}'}" Foreground="#059669" FontSize="15" FontWeight="Bold" Margin="0,4"/>
+                        </Grid>
+                    </Border>
+
+                    <Button Command="{Binding CloseViewBankModalCommand}" Content="Close" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="20,8" HorizontalAlignment="Right" Cursor="Hand"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
