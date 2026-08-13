@@ -15,7 +15,7 @@
 
                     <!-- Top Action Buttons -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="📊 Export Excel" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
+                        <Button Content="📊 Export Excel" Visibility="Collapsed" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
                         <Button Content="🖨️ Print List" Command="{Binding PrintCustomersListCommand}" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3" Cursor="Hand"/>
                         <Button Content="📥 Download Template" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
                         <Button Content="📤 Import Excel" Background="#E2E8F0" Foreground="#1E293B" Padding="10,6" Margin="3"/>
