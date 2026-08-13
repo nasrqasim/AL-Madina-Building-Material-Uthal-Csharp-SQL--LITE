@@ -62,7 +62,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _statusFilter = "All";
 
-        partial void OnSearchQueryChanged(string value) => _ = LoadPurchasesAsync();
+        private System.Threading.CancellationTokenSource? _searchCts;
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            _searchCts?.Cancel();
+            _searchCts = new System.Threading.CancellationTokenSource();
+            var token = _searchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadPurchasesAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
+        }
         partial void OnFromDateChanged(DateTime? value) => _ = LoadPurchasesAsync();
         partial void OnToDateChanged(DateTime? value) => _ = LoadPurchasesAsync();
         partial void OnStatusFilterChanged(string value) => _ = LoadPurchasesAsync();
@@ -717,9 +735,24 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _searchQuery = string.Empty;
 
+        private System.Threading.CancellationTokenSource? _inventorySearchCts;
+
         partial void OnSearchQueryChanged(string value)
         {
-            _ = LoadInventoryAsync();
+            _inventorySearchCts?.Cancel();
+            _inventorySearchCts = new System.Threading.CancellationTokenSource();
+            var token = _inventorySearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadInventoryAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         [ObservableProperty]

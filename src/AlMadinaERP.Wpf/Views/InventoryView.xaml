@@ -172,7 +172,7 @@
                     <!-- Items DataGrid Table with Full Visibility & Horizontal Scroll -->
                     <Grid>
                         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                            <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1400" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                            <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1400" ScrollViewer.HorizontalScrollBarVisibility="Auto" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
                                     <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="260" FontWeight="SemiBold"/>

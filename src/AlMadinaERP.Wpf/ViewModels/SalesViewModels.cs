@@ -76,7 +76,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _statusFilter = "All";
 
-        partial void OnSearchQueryChanged(string value) => _ = LoadInvoicesAsync();
+        private System.Threading.CancellationTokenSource? _salesSearchCts;
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            _salesSearchCts?.Cancel();
+            _salesSearchCts = new System.Threading.CancellationTokenSource();
+            var token = _salesSearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadInvoicesAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
+        }
         partial void OnFromDateChanged(DateTime? value) => _ = LoadInvoicesAsync();
         partial void OnToDateChanged(DateTime? value) => _ = LoadInvoicesAsync();
         partial void OnStatusFilterChanged(string value) => _ = LoadInvoicesAsync();

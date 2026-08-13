@@ -1699,9 +1699,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _vendorSearchQuery = string.Empty;
 
+        private System.Threading.CancellationTokenSource? _vendorReportSearchCts;
+        private System.Threading.CancellationTokenSource? _customerReportSearchCts;
+
         partial void OnVendorSearchQueryChanged(string value)
         {
-            _ = LoadVendorBalancesAsync();
+            _vendorReportSearchCts?.Cancel();
+            _vendorReportSearchCts = new System.Threading.CancellationTokenSource();
+            var token = _vendorReportSearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadVendorBalancesAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         [ObservableProperty]
@@ -1709,7 +1725,20 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         partial void OnCustomerSearchQueryChanged(string value)
         {
-            _ = LoadCustomerBalancesAsync();
+            _customerReportSearchCts?.Cancel();
+            _customerReportSearchCts = new System.Threading.CancellationTokenSource();
+            var token = _customerReportSearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadCustomerBalancesAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         public async Task LoadCustomerBalancesAsync()

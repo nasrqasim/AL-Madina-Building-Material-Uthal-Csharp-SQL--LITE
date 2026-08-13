@@ -139,9 +139,24 @@ namespace AlMadinaERP.Wpf.ViewModels
             await LoadCustomersAsync();
         }
 
+        private System.Threading.CancellationTokenSource? _searchCts;
+
         partial void OnSearchQueryChanged(string value)
         {
-            _ = LoadCustomersAsync();
+            _searchCts?.Cancel();
+            _searchCts = new System.Threading.CancellationTokenSource();
+            var token = _searchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadCustomersAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         [RelayCommand]
@@ -598,9 +613,24 @@ namespace AlMadinaERP.Wpf.ViewModels
             NetVendorBalance = TotalVendorPayables - TotalVendorAdvances;
         }
 
+        private System.Threading.CancellationTokenSource? _searchCts;
+
         partial void OnSearchQueryChanged(string value)
         {
-            _ = LoadVendorsAsync();
+            _searchCts?.Cancel();
+            _searchCts = new System.Threading.CancellationTokenSource();
+            var token = _searchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadVendorsAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         [RelayCommand]

@@ -336,7 +336,7 @@
                         </Border>
 
                         <!-- INVOICES DATAGRID -->
-                        <DataGrid ItemsSource="{Binding Purchases}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="36">
+                        <DataGrid ItemsSource="{Binding Purchases}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="36" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Style>
                                 <Style TargetType="DataGrid">
                                     <Setter Property="Visibility" Value="Visible"/>
