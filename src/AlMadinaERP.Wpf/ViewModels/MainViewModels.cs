@@ -226,6 +226,12 @@ namespace AlMadinaERP.Wpf.ViewModels
                 SalaryVM.SubViewMode = SalarySubViewMode.AdvanceList;
                 loadTask = () => SalaryVM.LoadSalariesAsync();
             }
+            else if (tabName.Equals("Salary Staff Report"))
+            {
+                CurrentView = ReportsVM;
+                ReportsVM.SelectedTabIndex = 6;
+                loadTask = () => ReportsVM.GenerateReportsAsync();
+            }
             else if (tabName.StartsWith("Salary"))
             {
                 CurrentView = SalaryVM;

@@ -241,6 +241,7 @@
                                 <StackPanel>
                                     <Button Content="Salary Staff" Command="{Binding NavigateTabCommand}" CommandParameter="Salary Staff" Style="{DynamicResource SubMenuButton}"/>
                                     <Button Content="Advance" Command="{Binding NavigateTabCommand}" CommandParameter="Salary Advance" Style="{DynamicResource SubMenuButton}"/>
+                                    <Button Content="Salary Report" Command="{Binding NavigateTabCommand}" CommandParameter="Salary Staff Report" Style="{DynamicResource SubMenuButton}"/>
                                 </StackPanel>
                             </Expander>
 
