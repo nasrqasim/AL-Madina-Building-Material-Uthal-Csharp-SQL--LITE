@@ -1611,120 +1611,114 @@ namespace AlMadinaERP.Services
 
             Application.Current?.Dispatcher?.Invoke(() =>
             {
-                var printDialog = new PrintDialog();
-                if (printDialog.ShowDialog() == true)
+                try
                 {
-                    var doc = new FlowDocument
+                    var printDialog = new PrintDialog();
+                    if (printDialog.ShowDialog() == true)
                     {
-                        PageWidth = 793,
-                        PageHeight = 1122,
-                        PagePadding = new Thickness(40),
-                        FontFamily = new FontFamily("Times New Roman"),
-                        FontSize = 10
-                    };
+                        var staffList = System.Linq.Enumerable.ToList(staffs ?? System.Linq.Enumerable.Empty<Staff>());
+                        decimal totalBasic = staffList.Sum(s => s.BasicSalary);
 
-                    var logo = TryGetLogoImage(120);
-                    if (logo != null) doc.Blocks.Add(new BlockUIContainer(logo));
-
-                    var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-                    var headPar = new Paragraph(new Run($"{compName}\nSALARY STAFF REGISTER\nPrinted Date: {DateTime.Now:dd-MMM-yyyy HH:mm}"))
-                    {
-                        TextAlignment = TextAlignment.Center,
-                        FontSize = 14,
-                        FontWeight = FontWeights.Bold,
-                        Margin = new Thickness(0, 0, 0, 15)
-                    };
-                    doc.Blocks.Add(headPar);
-
-                    var staffList = System.Linq.Enumerable.ToList(staffs ?? System.Linq.Enumerable.Empty<Staff>());
-
-                    var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(1), BorderBrush = System.Windows.Media.Brushes.LightGray, Margin = new Thickness(0, 10, 0, 10) };
-                    table.Columns.Add(new TableColumn { Width = new GridLength(80) });   // #
-                    table.Columns.Add(new TableColumn { Width = new GridLength(90) });   // Code
-                    table.Columns.Add(new TableColumn { Width = new GridLength(150) });  // Name
-                    table.Columns.Add(new TableColumn { Width = new GridLength(120) });  // Designation
-                    table.Columns.Add(new TableColumn { Width = new GridLength(90) });   // Joining Date
-                    table.Columns.Add(new TableColumn { Width = new GridLength(120) });  // Basic Salary
-
-                    var rowGroup = new TableRowGroup();
-                    var headerRow = new TableRow { Background = System.Windows.Media.Brushes.DarkSlateGray };
-                    var hdrs = new[] { "#", "Code", "Full Name", "Designation", "Joining Date", "Basic Salary (PKR)" };
-                    foreach (var h in hdrs)
-                    {
-                        var cell = new TableCell(new Paragraph(new Run(h)) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 10, Margin = new Thickness(6, 4, 6, 4) });
-                        cell.BorderThickness = new Thickness(1);
-                        cell.BorderBrush = System.Windows.Media.Brushes.LightGray;
-                        headerRow.Cells.Add(cell);
-                    }
-                    rowGroup.Rows.Add(headerRow);
-
-                    int rowIdx = 0;
-                    decimal totalBasic = 0m;
-                    foreach (var s in staffList)
-                    {
-                        totalBasic += s.BasicSalary;
-                        var row = new TableRow { Background = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White };
-
-                        var cells = new[]
+                        var doc = new FlowDocument
                         {
-                            ((rowIdx + 1).ToString(), false, TextAlignment.Left),
-                            (s.StaffCode ?? "", true, TextAlignment.Left),
-                            (s.FullName ?? "", true, TextAlignment.Left),
-                            (s.Designation ?? "", false, TextAlignment.Left),
-                            (s.JoiningDate.ToString("dd/MM/yyyy"), false, TextAlignment.Left),
-                            ($"Rs. {s.BasicSalary:N0}", true, TextAlignment.Right)
+                            PageWidth = 794,  // Standard A4 Width (210mm @ 96 DPI)
+                            PageHeight = 1123, // Standard A4 Height (297mm @ 96 DPI)
+                            PagePadding = new Thickness(40),
+                            ColumnWidth = 714,
+                            FontFamily = new FontFamily("Times New Roman")
                         };
 
-                        foreach (var (val, bold, align) in cells)
+                        var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL ERP" : company.CompanyName.ToUpper();
+                        var pHeader = new Paragraph(new Run(compName))
                         {
-                            var cellPar = new Paragraph(new Run(val))
+                            FontSize = 18,
+                            FontWeight = FontWeights.Bold,
+                            Foreground = System.Windows.Media.Brushes.Maroon,
+                            TextAlignment = TextAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 4)
+                        };
+                        doc.Blocks.Add(pHeader);
+
+                        var pSub = new Paragraph(new Run("SALARY STAFF REGISTER & PAYROLL STATEMENT"))
+                        {
+                            FontSize = 13,
+                            FontWeight = FontWeights.Bold,
+                            Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+                            TextAlignment = TextAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 10)
+                        };
+                        doc.Blocks.Add(pSub);
+
+                        var pMeta = new Paragraph();
+                        pMeta.Inlines.Add(new Run($"Total Staff Members: {staffList.Count}   |   Total Basic Salary: PKR {totalBasic:N2}\n") { FontWeight = FontWeights.Bold });
+                        pMeta.Inlines.Add(new Run($"Statement Date: {DateTime.Now:dd/MM/yyyy HH:mm}   |   Status: Active Payroll"));
+                        pMeta.FontSize = 10;
+                        pMeta.Margin = new Thickness(0, 0, 0, 14);
+                        doc.Blocks.Add(pMeta);
+
+                        var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0.5), BorderBrush = System.Windows.Media.Brushes.Gray };
+                        table.Columns.Add(new TableColumn { Width = new GridLength(85) });   // CODE
+                        table.Columns.Add(new TableColumn { Width = new GridLength(160) });  // STAFF NAME
+                        table.Columns.Add(new TableColumn { Width = new GridLength(145) });  // DESIGNATION / DEPT
+                        table.Columns.Add(new TableColumn { Width = new GridLength(105) });  // PHONE
+                        table.Columns.Add(new TableColumn { Width = new GridLength(95) });   // JOINING DATE
+                        table.Columns.Add(new TableColumn { Width = new GridLength(124) });  // BASIC SALARY (PKR)
+
+                        var headerRowGroup = new TableRowGroup();
+                        var headerRow = new TableRow { Background = System.Windows.Media.Brushes.DarkGreen };
+                        string[] headers = { "CODE", "STAFF NAME", "DESIGNATION / DEPT", "PHONE", "JOINING DATE", "BASIC SALARY (PKR)" };
+                        foreach (var h in headers)
+                        {
+                            var cell = new TableCell(new Paragraph(new Run(h))
                             {
                                 FontSize = 9,
-                                Margin = new Thickness(6, 4, 6, 4),
-                                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
-                                TextAlignment = align
-                            };
-                            var cell = new TableCell(cellPar);
-                            cell.BorderThickness = new Thickness(1);
-                            cell.BorderBrush = System.Windows.Media.Brushes.LightGray;
-                            row.Cells.Add(cell);
+                                FontWeight = FontWeights.Bold,
+                                Foreground = System.Windows.Media.Brushes.White,
+                                TextAlignment = h.Contains("PKR") ? TextAlignment.Right : TextAlignment.Left
+                            })
+                            { Padding = new Thickness(4) };
+                            headerRow.Cells.Add(cell);
                         }
-                        rowGroup.Rows.Add(row);
-                        rowIdx++;
-                    }
+                        headerRowGroup.Rows.Add(headerRow);
+                        table.RowGroups.Add(headerRowGroup);
 
-                    // Totals Row
-                    var totalRow = new TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-                    var totals = new[]
-                    {
-                        ("TOTAL", true, TextAlignment.Left),
-                        ($"{staffList.Count} Staff", true, TextAlignment.Left),
-                        ("", false, TextAlignment.Left),
-                        ("", false, TextAlignment.Left),
-                        ("", false, TextAlignment.Left),
-                        ($"Rs. {totalBasic:N0}", true, TextAlignment.Right)
-                    };
-                    foreach (var (val, bold, align) in totals)
-                    {
-                        var cellPar = new Paragraph(new Run(val))
+                        var dataRowGroup = new TableRowGroup();
+                        bool alt = false;
+                        foreach (var s in staffList)
                         {
-                            FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
-                            FontSize = 10,
-                            Margin = new Thickness(6, 4, 6, 4),
-                            TextAlignment = align
-                        };
-                        var cell = new TableCell(cellPar);
-                        cell.BorderThickness = new Thickness(1);
-                        cell.BorderBrush = System.Windows.Media.Brushes.Gray;
-                        totalRow.Cells.Add(cell);
+                            var row = new TableRow
+                            {
+                                Background = alt ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White
+                            };
+                            alt = !alt;
+
+                            var deptDesig = string.IsNullOrEmpty(s.Department) ? s.Designation ?? "-" : $"{s.Designation} ({s.Department})";
+
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(s.StaffCode ?? "-")) { FontSize = 9, FontWeight = FontWeights.Bold }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(s.FullName ?? "-")) { FontSize = 9, FontWeight = FontWeights.Bold }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(deptDesig)) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(s.Phone ?? "-")) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(s.JoiningDate.ToString("dd/MM/yyyy"))) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run($"{s.BasicSalary:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+
+                            dataRowGroup.Rows.Add(row);
+                        }
+
+                        var totalRow = new TableRow { Background = System.Windows.Media.Brushes.LightGray };
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL")) { FontSize = 9, FontWeight = FontWeights.Bold }) { ColumnSpan = 5, Padding = new Thickness(4) });
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"{totalBasic:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                        dataRowGroup.Rows.Add(totalRow);
+
+                        table.RowGroups.Add(dataRowGroup);
+                        doc.Blocks.Add(table);
+
+                        var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
+                        printDialog.PrintDocument(paginator, "Salary Staff Register");
                     }
-                    rowGroup.Rows.Add(totalRow);
-
-                    table.RowGroups.Add(rowGroup);
-                    doc.Blocks.Add(table);
-
-                    var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
-                    printDialog.PrintDocument(paginator, "Salary Staff Register");
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show("Printing error: " + ex.Message, "Print Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             });
         }
@@ -1736,88 +1730,126 @@ namespace AlMadinaERP.Services
 
             Application.Current?.Dispatcher?.Invoke(() =>
             {
-                var printDialog = new PrintDialog();
-                if (printDialog.ShowDialog() == true)
+                try
                 {
-                    var doc = new FlowDocument
+                    var printDialog = new PrintDialog();
+                    if (printDialog.ShowDialog() == true)
                     {
-                        PageWidth = 793,
-                        PageHeight = 1122,
-                        PagePadding = new Thickness(40),
-                        FontFamily = new FontFamily("Times New Roman"),
-                        FontSize = 11
-                    };
+                        var entryList = System.Linq.Enumerable.ToList(entries ?? System.Linq.Enumerable.Empty<AlMadinaERP.Core.DTOs.SalaryLedgerRowDto>());
+                        decimal totPaid = entryList.Sum(e => e.PaidOut);
+                        decimal totAdv = entryList.Sum(e => e.AdvanceReceived);
+                        decimal netBal = totPaid - totAdv;
 
-                    var logo = TryGetLogoImage(120);
-                    if (logo != null) doc.Blocks.Add(new BlockUIContainer(logo));
+                        var doc = new FlowDocument
+                        {
+                            PageWidth = 794,  // Standard A4 Width (210mm @ 96 DPI)
+                            PageHeight = 1123, // Standard A4 Height (297mm @ 96 DPI)
+                            PagePadding = new Thickness(40),
+                            ColumnWidth = 714,
+                            FontFamily = new FontFamily("Times New Roman")
+                        };
 
-                    var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-                    var title = new Paragraph(new Run($"{compName}\nSTAFF SALARY STATEMENT / LEDGER\nEmployee: {staff.FullName} ({staff.StaffCode})\nPhone: {staff.Phone}\nPrinted Date: {DateTime.Now:dd-MMM-yyyy HH:mm}"))
-                    {
-                        TextAlignment = TextAlignment.Center,
-                        FontSize = 14,
-                        FontWeight = FontWeights.Bold
-                    };
-                    doc.Blocks.Add(title);
+                        var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL ERP" : company.CompanyName.ToUpper();
+                        var pHeader = new Paragraph(new Run(compName))
+                        {
+                            FontSize = 18,
+                            FontWeight = FontWeights.Bold,
+                            Foreground = System.Windows.Media.Brushes.Maroon,
+                            TextAlignment = TextAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 4)
+                        };
+                        doc.Blocks.Add(pHeader);
 
-                    var table = new Table();
-                    table.Columns.Add(new TableColumn { Width = new GridLength(110) }); // Date
-                    table.Columns.Add(new TableColumn { Width = new GridLength(100) }); // Type
-                    table.Columns.Add(new TableColumn { Width = new GridLength(100) }); // Description
-                    table.Columns.Add(new TableColumn { Width = new GridLength(90) });  // Paid Out (+)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(90) });  // Advance (-)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(100) }); // Balance
-                    table.Columns.Add(new TableColumn { Width = new GridLength(120) }); // Remarks
+                        var pSub = new Paragraph(new Run($"STAFF SALARY STATEMENT - {(staff.FullName ?? "Staff").ToUpper()} ({staff.StaffCode ?? ""})"))
+                        {
+                            FontSize = 13,
+                            FontWeight = FontWeights.Bold,
+                            Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+                            TextAlignment = TextAlignment.Center,
+                            Margin = new Thickness(0, 0, 0, 10)
+                        };
+                        doc.Blocks.Add(pSub);
 
-                    var rowGroup = new TableRowGroup();
-                    var headerRow = new TableRow { Background = System.Windows.Media.Brushes.LightGray };
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Date")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Type")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Description")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Paid Out (+)")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Advance (-)")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Balance")) { FontWeight = FontWeights.Bold }));
-                    headerRow.Cells.Add(new TableCell(new Paragraph(new Run("Remarks")) { FontWeight = FontWeights.Bold }));
-                    rowGroup.Rows.Add(headerRow);
+                        var pMeta = new Paragraph();
+                        pMeta.Inlines.Add(new Run($"Phone: {staff.Phone ?? "N/A"}   |   Designation: {staff.Designation ?? "N/A"}   |   Basic Salary: PKR {staff.BasicSalary:N2}\n") { FontWeight = FontWeights.Bold });
+                        pMeta.Inlines.Add(new Run($"Statement Date: {DateTime.Now:dd/MM/yyyy HH:mm}   |   Total Entries: {entryList.Count}"));
+                        pMeta.FontSize = 10;
+                        pMeta.Margin = new Thickness(0, 0, 0, 14);
+                        doc.Blocks.Add(pMeta);
 
-                    decimal totPaid = 0m, totAdv = 0m;
-                    decimal runningBalance = 0m;
-                    foreach (var e in entries ?? System.Linq.Enumerable.Empty<AlMadinaERP.Core.DTOs.SalaryLedgerRowDto>())
-                    {
-                        totPaid += e.PaidOut;
-                        totAdv += e.AdvanceReceived;
-                        runningBalance += e.PaidOut - e.AdvanceReceived;
+                        var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0.5), BorderBrush = System.Windows.Media.Brushes.Gray };
+                        table.Columns.Add(new TableColumn { Width = new GridLength(80) });  // DATE
+                        table.Columns.Add(new TableColumn { Width = new GridLength(90) });  // VOUCHER #
+                        table.Columns.Add(new TableColumn { Width = new GridLength(100) }); // TYPE
+                        table.Columns.Add(new TableColumn { Width = new GridLength(180) }); // DESCRIPTION
+                        table.Columns.Add(new TableColumn { Width = new GridLength(85) });  // DEBIT (PKR)
+                        table.Columns.Add(new TableColumn { Width = new GridLength(85) });  // CREDIT (PKR)
+                        table.Columns.Add(new TableColumn { Width = new GridLength(94) });  // BALANCE (PKR)
 
-                        var row = new TableRow();
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Date.ToString("yyyy-MM-dd HH:mm")))));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Type ?? ""))));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Description ?? ""))));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.PaidOut > 0 ? e.PaidOut.ToString("N0") : "-"))));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.AdvanceReceived > 0 ? e.AdvanceReceived.ToString("N0") : "-"))));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(runningBalance.ToString("N0"))) { FontWeight = FontWeights.Bold }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Description ?? ""))));
-                        rowGroup.Rows.Add(row);
+                        var headerRowGroup = new TableRowGroup();
+                        var headerRow = new TableRow { Background = System.Windows.Media.Brushes.DarkGreen };
+                        string[] headers = { "DATE", "VOUCHER #", "TYPE", "DESCRIPTION", "DEBIT (PKR)", "CREDIT (PKR)", "BALANCE (PKR)" };
+                        foreach (var h in headers)
+                        {
+                            var cell = new TableCell(new Paragraph(new Run(h))
+                            {
+                                FontSize = 9,
+                                FontWeight = FontWeights.Bold,
+                                Foreground = System.Windows.Media.Brushes.White,
+                                TextAlignment = h.Contains("PKR") ? TextAlignment.Right : TextAlignment.Left
+                            })
+                            { Padding = new Thickness(4) };
+                            headerRow.Cells.Add(cell);
+                        }
+                        headerRowGroup.Rows.Add(headerRow);
+                        table.RowGroups.Add(headerRowGroup);
+
+                        var dataRowGroup = new TableRowGroup();
+                        bool alt = false;
+                        decimal runningBalance = 0m;
+                        foreach (var entry in entryList)
+                        {
+                            var row = new TableRow
+                            {
+                                Background = alt ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White
+                            };
+                            alt = !alt;
+
+                            runningBalance += entry.PaidOut - entry.AdvanceReceived;
+                            var vNum = string.IsNullOrEmpty(entry.VoucherNumber) ? $"VCH-SAL-{entry.Date:yyyyMMdd}" : entry.VoucherNumber;
+
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(entry.Date.ToString("dd/MM/yyyy"))) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(vNum)) { FontSize = 9, FontWeight = FontWeights.Bold }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(entry.Type ?? "-")) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(entry.Description ?? "-")) { FontSize = 9 }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(entry.PaidOut > 0 ? $"{entry.PaidOut:N2}" : "-")) { FontSize = 9, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run(entry.AdvanceReceived > 0 ? $"{entry.AdvanceReceived:N2}" : "-")) { FontSize = 9, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                            row.Cells.Add(new TableCell(new Paragraph(new Run($"{runningBalance:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+
+                            dataRowGroup.Rows.Add(row);
+                        }
+
+                        var totalRow = new TableRow { Background = System.Windows.Media.Brushes.LightGray };
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL")) { FontSize = 9, FontWeight = FontWeights.Bold }) { ColumnSpan = 4, Padding = new Thickness(4) });
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"{totPaid:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"{totAdv:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                        totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"{runningBalance:N2}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }) { Padding = new Thickness(4) });
+                        dataRowGroup.Rows.Add(totalRow);
+
+                        table.RowGroups.Add(dataRowGroup);
+                        doc.Blocks.Add(table);
+
+                        var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
+                        printDialog.PrintDocument(paginator, $"Staff Salary Ledger - {staff.FullName}");
                     }
-
-                    // Totals Row
-                    var totalRow = new TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL")) { FontWeight = FontWeights.Bold }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totPaid.ToString("N0"))) { FontWeight = FontWeights.Bold }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totAdv.ToString("N0"))) { FontWeight = FontWeights.Bold }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"Net: {runningBalance:N0}")) { FontWeight = FontWeights.Bold }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(runningBalance >= 0 ? "Staff Owes" : "Company Owes")) { FontWeight = FontWeights.Bold }));
-                    rowGroup.Rows.Add(totalRow);
-
-                    table.RowGroups.Add(rowGroup);
-                    doc.Blocks.Add(table);
-
-                    var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
-                    printDialog.PrintDocument(paginator, $"Staff Salary Ledger - {staff.FullName}");
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show("Printing error: " + ex.Message, "Print Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             });
         }
     }
 }
+
 

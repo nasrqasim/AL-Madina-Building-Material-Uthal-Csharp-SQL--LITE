@@ -192,6 +192,7 @@ namespace AlMadinaERP.Core.DTOs
     public class SalaryLedgerRowDto
     {
         public DateTime Date { get; set; }
+        public string VoucherNumber { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal PaidOut { get; set; }
