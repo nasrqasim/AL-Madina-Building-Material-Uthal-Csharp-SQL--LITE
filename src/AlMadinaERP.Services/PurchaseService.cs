@@ -244,12 +244,18 @@ namespace AlMadinaERP.Services
 
                 invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.ExtraExpenses + invoice.VehicleCharges);
 
-                // Vendor Advance & Owes Logic for Credit / Advance Purchases
-                if (vendor != null && !invoice.IsCashPurchase)
+                if (invoice.AmountPaid <= 0 && invoice.IsCashPurchase)
+                {
+                    invoice.AmountPaid = invoice.TotalAmount;
+                }
+
+                decimal netToVendor = Math.Max(0m, invoice.TotalAmount - invoice.AmountPaid);
+
+                // Vendor Advance & Owes Logic for Credit / Advance / Partial Purchases
+                if (vendor != null)
                 {
                     if (invoice.Type == PurchaseType.PurchaseInvoice)
                     {
-                        decimal netToVendor = Math.Max(0m, invoice.TotalAmount - invoice.AmountPaid);
                         if (vendor.AdvanceAvailable >= netToVendor)
                         {
                             invoice.AdvanceUsed = netToVendor;
@@ -259,7 +265,7 @@ namespace AlMadinaERP.Services
                         else
                         {
                             invoice.AdvanceUsed = vendor.AdvanceAvailable;
-                            invoice.OutstandingAmount = netToVendor - vendor.AdvanceAvailable;
+                            invoice.OutstandingAmount = Math.Max(0m, netToVendor - vendor.AdvanceAvailable);
                             vendor.AdvanceAvailable = 0;
                             vendor.OwesAmount += invoice.OutstandingAmount;
                         }
@@ -281,10 +287,8 @@ namespace AlMadinaERP.Services
                 }
                 else
                 {
-                    // Cash Purchase
                     invoice.AdvanceUsed = 0;
-                    invoice.OutstandingAmount = 0;
-                    invoice.AmountPaid = invoice.TotalAmount;
+                    invoice.OutstandingAmount = netToVendor;
                 }
 
                 // Clear navigation property references to avoid EF Core entity tracking collisions

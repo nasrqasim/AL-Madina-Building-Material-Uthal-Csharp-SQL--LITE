@@ -248,21 +248,29 @@ namespace AlMadinaERP.Services
                 // Total Calculation
                 invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.ExtraCharges - invoice.AdditionalDiscount);
 
-                // Customer Advance & Owes Logic for Credit / Advance Sales
-                if (customer != null && !invoice.IsCashSale)
+                // Preserve user-specified PaidAmount if set, otherwise default for full cash sale
+                if (invoice.PaidAmount <= 0 && invoice.IsCashSale)
+                {
+                    invoice.PaidAmount = invoice.TotalAmount;
+                }
+
+                decimal remainingDue = Math.Max(0m, invoice.TotalAmount - invoice.PaidAmount);
+
+                // Customer Advance & Owes Logic for Credit / Advance / Partial Sales
+                if (customer != null)
                 {
                     if (invoice.Type == InvoiceType.SaleInvoice || invoice.Type == InvoiceType.POSCounterSale)
                     {
-                        if (customer.AdvanceAvailable >= invoice.TotalAmount)
+                        if (customer.AdvanceAvailable >= remainingDue)
                         {
-                            invoice.AdvanceUsed = invoice.TotalAmount;
-                            customer.AdvanceAvailable -= invoice.TotalAmount;
+                            invoice.AdvanceUsed = remainingDue;
+                            customer.AdvanceAvailable -= remainingDue;
                             invoice.OutstandingAmount = 0;
                         }
                         else
                         {
                             invoice.AdvanceUsed = customer.AdvanceAvailable;
-                            invoice.OutstandingAmount = invoice.TotalAmount - customer.AdvanceAvailable;
+                            invoice.OutstandingAmount = Math.Max(0m, remainingDue - customer.AdvanceAvailable);
                             customer.AdvanceAvailable = 0;
                             customer.OwesAmount += invoice.OutstandingAmount;
                         }
@@ -284,10 +292,8 @@ namespace AlMadinaERP.Services
                 }
                 else
                 {
-                    // Cash sale
                     invoice.AdvanceUsed = 0;
-                    invoice.OutstandingAmount = 0;
-                    invoice.PaidAmount = invoice.TotalAmount;
+                    invoice.OutstandingAmount = remainingDue;
                 }
 
                 // Clear navigation property references to avoid EF Core entity tracking collisions
