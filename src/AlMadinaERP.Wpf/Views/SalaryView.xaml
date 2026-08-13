@@ -86,7 +86,7 @@
                     <StackPanel>
                         <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>
 
-                        <DataGrid ItemsSource="{Binding JournalEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38">
+                        <DataGrid ItemsSource="{Binding JournalEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
                                 <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="130" FontWeight="Bold"/>
@@ -143,7 +143,7 @@
                     <StackPanel>
                         <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>
 
-                        <DataGrid ItemsSource="{Binding Staffs}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="42">
+                        <DataGrid ItemsSource="{Binding Staffs}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="42" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="STAFF CODE" Binding="{Binding StaffCode}" Width="120" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="170" FontWeight="Bold"/>
@@ -209,7 +209,7 @@
                     <StackPanel>
                         <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>
 
-                        <DataGrid ItemsSource="{Binding SalaryAdvances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38">
+                        <DataGrid ItemsSource="{Binding SalaryAdvances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="VOUCHER NO" Binding="{Binding VoucherNumber}" Width="140" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>

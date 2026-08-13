@@ -41,7 +41,7 @@
                                     <Button Grid.Column="4" Content="Generate Report" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Height="34" Cursor="Hand"/>
                                 </Grid>
 
-                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="40">
+                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="40" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
                                         <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*"/>
@@ -126,7 +126,7 @@
                         <!-- INVENTORY STOCK BALANCES TABLE -->
                         <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel>
-                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="120" FontWeight="Bold"/>
                                         <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*"/>
@@ -161,7 +161,7 @@
 
                         <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel>
-                                <DataGrid ItemsSource="{Binding LowStockAlerts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                <DataGrid ItemsSource="{Binding LowStockAlerts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ITEM CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
                                         <DataGridTextColumn Header="ITEM NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>
@@ -198,7 +198,7 @@
                                     <TextBox Text="{Binding CustomerSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="300" HorizontalAlignment="Left" Height="34"/>
                                 </Grid>
 
-                                <DataGrid ItemsSource="{Binding CustomerBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                <DataGrid ItemsSource="{Binding CustomerBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="CUSTOMER CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
                                         <DataGridTextColumn Header="CUSTOMER NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>

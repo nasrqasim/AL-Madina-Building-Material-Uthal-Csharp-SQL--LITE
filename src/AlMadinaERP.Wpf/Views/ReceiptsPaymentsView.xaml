@@ -62,7 +62,7 @@
                             </ComboBox>
                         </Grid>
 
-                        <DataGrid ItemsSource="{Binding CashReceipts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38">
+                        <DataGrid ItemsSource="{Binding CashReceipts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="VOUCHER #" Binding="{Binding ReceiptNumber}" Width="130" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
@@ -138,7 +138,7 @@
                     <StackPanel>
                         <TextBox Text="{Binding ReceiptSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>
 
-                        <DataGrid ItemsSource="{Binding BankReceipts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38">
+                        <DataGrid ItemsSource="{Binding BankReceipts}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="VOUCHER #" Binding="{Binding ReceiptNumber}" Width="130" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
@@ -206,7 +206,7 @@
                     <StackPanel>
                         <TextBox Text="{Binding PaymentSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>
 
-                        <DataGrid ItemsSource="{Binding CashPayments}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38">
+                        <DataGrid ItemsSource="{Binding CashPayments}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="VOUCHER #" Binding="{Binding PaymentNumber}" Width="130" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>

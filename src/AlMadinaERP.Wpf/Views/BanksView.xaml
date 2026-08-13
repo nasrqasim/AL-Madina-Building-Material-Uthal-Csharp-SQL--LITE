@@ -32,7 +32,7 @@
 
                 <!-- BANK ACCOUNTS DATAGRID TABLE (Screenshot 8 Match) -->
                 <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
-                    <DataGrid ItemsSource="{Binding Banks}" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" Foreground="#0F172A" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="420">
+                    <DataGrid ItemsSource="{Binding Banks}" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" Foreground="#0F172A" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="420" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="CODE" Binding="{Binding Code}" Width="120" FontWeight="Bold"/>
                             <DataGridTextColumn Header="BANK" Binding="{Binding BankName}" Width="160" FontWeight="SemiBold"/>
