@@ -336,6 +336,26 @@ namespace AlMadinaERP.Wpf.ViewModels
                         row.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{entry.RunningBalance:N2}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, TextAlignment = System.Windows.TextAlignment.Right }) { Padding = new System.Windows.Thickness(4) });
 
                         dataRowGroup.Rows.Add(row);
+
+                        if (entry.SaleInvoice?.Items != null && entry.SaleInvoice.Items.Count > 0)
+                        {
+                            foreach (var item in entry.SaleInvoice.Items)
+                            {
+                                var itemRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Azure };
+                                var itemCell = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"   └─ Item: {item.ItemName}  |  Qty: {item.Quantity} {item.UnitName}  |  Price/Unit: Rs.{item.Rate:N2}  |  Amount: Rs.{item.TotalPrice:N2}"))
+                                {
+                                    FontSize = 8.5,
+                                    Foreground = System.Windows.Media.Brushes.DarkSlateBlue,
+                                    FontStyle = System.Windows.FontStyles.Italic
+                                })
+                                {
+                                    ColumnSpan = 7,
+                                    Padding = new System.Windows.Thickness(8, 2, 4, 2)
+                                };
+                                itemRow.Cells.Add(itemCell);
+                                dataRowGroup.Rows.Add(itemRow);
+                            }
+                        }
                     }
 
                     var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightGray };
@@ -775,6 +795,26 @@ namespace AlMadinaERP.Wpf.ViewModels
                         row.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{entry.RunningBalance:N2}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, TextAlignment = System.Windows.TextAlignment.Right }) { Padding = new System.Windows.Thickness(4) });
 
                         dataRowGroup.Rows.Add(row);
+
+                        if (entry.PurchaseInvoice?.Items != null && entry.PurchaseInvoice.Items.Count > 0)
+                        {
+                            foreach (var item in entry.PurchaseInvoice.Items)
+                            {
+                                var itemRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Azure };
+                                var itemCell = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"   └─ Item: {item.ItemName}  |  Qty: {item.Quantity} {item.UnitName}  |  Price/Unit: Rs.{item.Rate:N2}  |  Amount: Rs.{item.TotalPrice:N2}"))
+                                {
+                                    FontSize = 8.5,
+                                    Foreground = System.Windows.Media.Brushes.DarkSlateBlue,
+                                    FontStyle = System.Windows.FontStyles.Italic
+                                })
+                                {
+                                    ColumnSpan = 7,
+                                    Padding = new System.Windows.Thickness(8, 2, 4, 2)
+                                };
+                                itemRow.Cells.Add(itemCell);
+                                dataRowGroup.Rows.Add(itemRow);
+                            }
+                        }
                     }
 
                     var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightGray };
