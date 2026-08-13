@@ -234,6 +234,9 @@ namespace AlMadinaERP.Data
                 "ALTER TABLE Customers ADD COLUMN CreditDays INTEGER DEFAULT 30;",
                 "ALTER TABLE Customers ADD COLUMN Notes TEXT DEFAULT '';",
 
+                // Staffs
+                "ALTER TABLE Staffs ADD COLUMN JoiningDate TEXT DEFAULT CURRENT_TIMESTAMP;",
+
                 // Vendors
                 "ALTER TABLE Vendors ADD COLUMN ContactPerson TEXT DEFAULT '';",
                 "ALTER TABLE Vendors ADD COLUMN VendorType TEXT DEFAULT 'Supplier';",

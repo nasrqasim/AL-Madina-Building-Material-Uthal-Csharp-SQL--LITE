@@ -1243,6 +1243,25 @@ namespace AlMadinaERP.Services
                         row.Cells.Add(new TableCell(new Paragraph(new Run(e.RunningBalance.ToString("N0"))) { FontWeight = FontWeights.Bold }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run(e.Remarks ?? ""))));
                         rowGroup.Rows.Add(row);
+
+                        if (e.SaleInvoice?.Items != null && e.SaleInvoice.Items.Count > 0)
+                        {
+                            foreach (var item in e.SaleInvoice.Items)
+                            {
+                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)) };
+                                var itemCell = new TableCell(new Paragraph(new Run($"   └─ {item.ItemName}  |  Qty: {item.Quantity} {item.UnitName} @ Rs.{item.Rate:N2}  =  Rs.{item.TotalPrice:N2}"))
+                                {
+                                    FontSize = 9.5,
+                                    Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+                                    FontStyle = FontStyles.Italic
+                                })
+                                {
+                                    ColumnSpan = 7
+                                };
+                                itemRow.Cells.Add(itemCell);
+                                rowGroup.Rows.Add(itemRow);
+                            }
+                        }
                     }
 
                     // Totals Row
@@ -1331,6 +1350,25 @@ namespace AlMadinaERP.Services
                         row.Cells.Add(new TableCell(new Paragraph(new Run(e.RunningBalance.ToString("N0"))) { FontWeight = FontWeights.Bold }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run(e.Remarks ?? ""))));
                         rowGroup.Rows.Add(row);
+
+                        if (e.PurchaseInvoice?.Items != null && e.PurchaseInvoice.Items.Count > 0)
+                        {
+                            foreach (var item in e.PurchaseInvoice.Items)
+                            {
+                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)) };
+                                var itemCell = new TableCell(new Paragraph(new Run($"   └─ {item.ItemName}  |  Qty: {item.Quantity} {item.UnitName} @ Rs.{item.Rate:N2}  =  Rs.{item.TotalPrice:N2}"))
+                                {
+                                    FontSize = 9.5,
+                                    Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+                                    FontStyle = FontStyles.Italic
+                                })
+                                {
+                                    ColumnSpan = 7
+                                };
+                                itemRow.Cells.Add(itemCell);
+                                rowGroup.Rows.Add(itemRow);
+                            }
+                        }
                     }
 
                     // Totals Row

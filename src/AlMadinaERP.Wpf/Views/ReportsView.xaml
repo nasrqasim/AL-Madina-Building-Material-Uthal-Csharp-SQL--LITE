@@ -391,6 +391,7 @@
                                 <DataGridTextColumn Header="DEBIT (+)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#DC2626"/>
                                 <DataGridTextColumn Header="CREDIT (-)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#16A34A"/>
                                 <DataGridTextColumn Header="BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="130" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="ITEMS / DETAILS" Binding="{Binding ItemDetailsSummary}" Width="200"/>
                                 <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
@@ -403,7 +404,7 @@
         <!-- MODAL 2: VENDOR LEDGER OVERLAY                                 -->
         <!-- ============================================================== -->
         <Grid Background="#80000000" Visibility="{Binding IsVendorLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
-            <Border Background="#FFFFFF" CornerRadius="12" Width="920" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="980" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="20,16" Background="#7A0C0C" CornerRadius="12,12,0,0">
                         <Grid>
@@ -429,6 +430,7 @@
                                 <DataGridTextColumn Header="DEBIT (-)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#16A34A"/>
                                 <DataGridTextColumn Header="CREDIT (+)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="110" Foreground="#DC2626"/>
                                 <DataGridTextColumn Header="BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="130" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="ITEMS / DETAILS" Binding="{Binding ItemDetailsSummary}" Width="200"/>
                                 <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>

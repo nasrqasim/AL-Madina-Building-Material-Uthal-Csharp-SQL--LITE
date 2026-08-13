@@ -92,11 +92,12 @@ namespace AlMadinaERP.Wpf.ViewModels
             if (string.IsNullOrEmpty(tabName)) return;
 
             StatusMessage = $"Navigating to {tabName}...";
+            Func<Task>? loadTask = null;
 
             if (tabName.Equals("Dashboard"))
             {
                 CurrentView = DashboardVM;
-                await DashboardVM.LoadDashboardAsync();
+                loadTask = () => DashboardVM.LoadDashboardAsync();
             }
             else if (tabName.StartsWith("Sales") || tabName.StartsWith("Sale") || tabName.Contains("POS"))
             {
@@ -113,7 +114,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                 {
                     SalesVM.ActiveSubView = SalesActiveSubView.SaleInvoiceList;
                 }
-                await SalesVM.LoadInvoicesAsync();
+                loadTask = () => SalesVM.LoadInvoicesAsync();
             }
             else if (tabName.StartsWith("Purchases") || tabName.StartsWith("Purchase"))
             {
@@ -128,34 +129,34 @@ namespace AlMadinaERP.Wpf.ViewModels
                     PurchasesVM.IsReturnMode = false;
                     PurchasesVM.IsFormVisible = false;
                 }
-                await PurchasesVM.LoadPurchasesAsync();
+                loadTask = () => PurchasesVM.LoadPurchasesAsync();
             }
             else if (tabName.Equals("CustomerBalances") || tabName.Equals("Customer Balances"))
             {
                 CurrentView = ReportsVM;
                 ReportsVM.SelectedTabIndex = 3;
-                await ReportsVM.GenerateReportsAsync();
+                loadTask = () => ReportsVM.GenerateReportsAsync();
             }
             else if (tabName.Equals("VendorBalances") || tabName.Equals("Vendor Balances"))
             {
                 CurrentView = ReportsVM;
                 ReportsVM.SelectedTabIndex = 4;
-                await ReportsVM.GenerateReportsAsync();
+                loadTask = () => ReportsVM.GenerateReportsAsync();
             }
             else if (tabName.Equals("Customers") || tabName.Equals("Customer") || tabName.Equals("Customer Master"))
             {
                 CurrentView = CustomersVM;
-                await CustomersVM.LoadCustomersAsync();
+                loadTask = () => CustomersVM.LoadCustomersAsync();
             }
             else if (tabName.Equals("Vendors") || tabName.Equals("Vendor") || tabName.Equals("Vendor Master"))
             {
                 CurrentView = VendorsVM;
-                await VendorsVM.LoadVendorsAsync();
+                loadTask = () => VendorsVM.LoadVendorsAsync();
             }
             else if (tabName.Equals("ChartOfInventory") || tabName.Equals("Chart of Inventory"))
             {
                 CurrentView = ChartOfInventoryVM;
-                await ChartOfInventoryVM.LoadChartAsync();
+                loadTask = () => ChartOfInventoryVM.LoadChartAsync();
             }
             else if (tabName.Equals("InventoryBalances") || tabName.Equals("Inventory Balances") ||
                      tabName.Equals("InventoryLedger") || tabName.Equals("Inventory Ledger") ||
@@ -172,17 +173,17 @@ namespace AlMadinaERP.Wpf.ViewModels
                 else if (tabName.Contains("Profit"))
                     ReportsVM.ActiveSubViewMode = ReportsSubViewMode.ItemWiseProfitLossReport;
 
-                await ReportsVM.GenerateReportsAsync();
+                loadTask = () => ReportsVM.GenerateReportsAsync();
             }
             else if (tabName.Equals("Inventory") || tabName.Equals("Inventory Master") || tabName.Equals("Items / Products") || tabName.Equals("Stock") || tabName.Equals("Items"))
             {
                 CurrentView = InventoryVM;
-                await InventoryVM.LoadInventoryAsync();
+                loadTask = () => InventoryVM.LoadInventoryAsync();
             }
             else if (tabName.Equals("Banks") || tabName.Equals("Bank"))
             {
                 CurrentView = BanksVM;
-                await BanksVM.LoadBanksAsync();
+                loadTask = () => BanksVM.LoadBanksAsync();
             }
             else if (tabName.StartsWith("Receipts") || tabName.StartsWith("Payments") || tabName.Contains("Receipt") || tabName.Contains("Payment") || tabName.Contains("Income") || tabName.Contains("Expense"))
             {
@@ -211,25 +212,25 @@ namespace AlMadinaERP.Wpf.ViewModels
                 {
                     ReceiptsPaymentsVM.ActiveSubView = "CashReceiptList";
                 }
-                await ReceiptsPaymentsVM.LoadDataAsync();
+                loadTask = () => ReceiptsPaymentsVM.LoadDataAsync();
             }
             else if (tabName.Equals("Journal") || tabName.Equals("Journal Entry"))
             {
                 CurrentView = SalaryVM;
                 SalaryVM.SubViewMode = SalarySubViewMode.JournalList;
-                await SalaryVM.LoadSalariesAsync();
+                loadTask = () => SalaryVM.LoadSalariesAsync();
             }
             else if (tabName.Contains("Advance") || tabName.Equals("Salary Advance"))
             {
                 CurrentView = SalaryVM;
                 SalaryVM.SubViewMode = SalarySubViewMode.AdvanceList;
-                await SalaryVM.LoadSalariesAsync();
+                loadTask = () => SalaryVM.LoadSalariesAsync();
             }
             else if (tabName.StartsWith("Salary"))
             {
                 CurrentView = SalaryVM;
                 SalaryVM.SubViewMode = SalarySubViewMode.StaffList;
-                await SalaryVM.LoadSalariesAsync();
+                loadTask = () => SalaryVM.LoadSalariesAsync();
             }
             else if (tabName.StartsWith("Reports") || tabName.Contains("Report") || tabName.Contains("Register") || tabName.Contains("Summary") || tabName.Contains("Vendor") || tabName.Contains("Customer") || tabName.Contains("Low Stock") || tabName.Contains("Inventory"))
             {
@@ -262,12 +263,24 @@ namespace AlMadinaERP.Wpf.ViewModels
                 {
                     ReportsVM.SelectedTabIndex = 5;
                 }
-                await ReportsVM.GenerateReportsAsync();
+                loadTask = () => ReportsVM.GenerateReportsAsync();
             }
             else if (tabName.StartsWith("Settings") || tabName.Contains("Company") || tabName.Contains("Year") || tabName.Contains("Backup"))
             {
                 CurrentView = SettingsVM;
-                await SettingsVM.LoadSettingsAsync();
+                loadTask = () => SettingsVM.LoadSettingsAsync();
+            }
+
+            if (loadTask != null)
+            {
+                try
+                {
+                    await loadTask();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Navigation data load error for {tabName}: {ex.Message}");
+                }
             }
 
             StatusMessage = $"Ready - {tabName}";

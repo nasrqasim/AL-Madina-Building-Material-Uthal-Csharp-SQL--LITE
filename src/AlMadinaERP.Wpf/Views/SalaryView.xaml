@@ -29,8 +29,8 @@
                         <TextBlock Text="Double entry manual transaction accounting records." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
-                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding PrintSalaryJournalCommand}" Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                        <Button Command="{Binding ExportSalaryJournalCommand}" Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                         <Button Command="{Binding OpenAddJournalModalCommand}" Content="+ ADD ENTRY" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
                     </StackPanel>
                 </Grid>
@@ -132,8 +132,8 @@
                         <TextBlock Text="Managing employee information, salary structure, and payroll records." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
-                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding PrintSalaryStaffListCommand}" Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                        <Button Command="{Binding ExportSalaryStaffListCommand}" Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                         <Button Command="{Binding OpenPaySalaryModalCommand}" Content="$ PAY SALARY" Background="#059669" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
                         <Button Command="{Binding OpenAddStaffModalCommand}" Content="+ ADD SALARY STAFF" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
                     </StackPanel>
@@ -145,9 +145,10 @@
 
                         <DataGrid ItemsSource="{Binding Staffs}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="42">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="STAFF CODE" Binding="{Binding StaffCode}" Width="130" FontWeight="Bold"/>
-                                <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="180" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="STAFF CODE" Binding="{Binding StaffCode}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="170" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DESIGNATION / DEPT" Binding="{Binding Designation}" Width="*"/>
+                                <DataGridTextColumn Header="JOINING DATE" Binding="{Binding JoiningDate, StringFormat='dd/MM/yyyy'}" Width="120"/>
                                 <DataGridTextColumn Header="BASIC SALARY" Binding="{Binding BasicSalary, StringFormat='PKR {0:N0}'}" Width="130" FontWeight="Bold" Foreground="#DC2626"/>
                                 <DataGridTemplateColumn Header="STATUS" Width="100">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -198,8 +199,8 @@
                         <TextBlock Text="Process and track salary advances for employees." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
-                        <Button Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding PrintSalaryAdvancesCommand}" Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                        <Button Command="{Binding ExportSalaryAdvancesCommand}" Content="📊 Export Excel" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                         <Button Command="{Binding OpenNewAdvanceFormCommand}" Content="+ NEW ADVANCE" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
                     </StackPanel>
                 </Grid>
@@ -485,6 +486,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="12"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="DESIGNATION" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
@@ -493,6 +496,10 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="DEPARTMENT" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
                                 <TextBox Text="{Binding NewStaff.Department}" Height="32"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="JOINING DATE" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
+                                <DatePicker SelectedDate="{Binding NewStaff.JoiningDate}" Height="32"/>
                             </StackPanel>
                         </Grid>
 

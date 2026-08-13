@@ -161,6 +161,8 @@ namespace AlMadinaERP.Services
         public async Task<List<CustomerLedger>> GetCustomerLedgerAsync(int customerId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             var query = _context.CustomerLedgers
+                .Include(cl => cl.SaleInvoice!)
+                .ThenInclude(s => s.Items)
                 .Where(cl => cl.CustomerId == customerId);
 
             if (fromDate.HasValue)

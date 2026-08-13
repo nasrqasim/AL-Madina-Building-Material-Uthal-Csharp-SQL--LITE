@@ -18,7 +18,21 @@ namespace AlMadinaERP.Core.Models
         
         public string Remarks { get; set; } = string.Empty;
         public int? SaleInvoiceId { get; set; }
+        public SaleInvoice? SaleInvoice { get; set; }
         public int? ReceiptId { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public string ItemDetailsSummary
+        {
+            get
+            {
+                if (SaleInvoice?.Items != null && SaleInvoice.Items.Count > 0)
+                {
+                    return string.Join("; ", SaleInvoice.Items.Select(i => $"{i.ItemName} ({i.Quantity} {i.UnitName} @ Rs.{i.Rate:N0})"));
+                }
+                return string.Empty;
+            }
+        }
     }
 
     public class VendorLedger
@@ -37,7 +51,21 @@ namespace AlMadinaERP.Core.Models
         
         public string Remarks { get; set; } = string.Empty;
         public int? PurchaseInvoiceId { get; set; }
+        public PurchaseInvoice? PurchaseInvoice { get; set; }
         public int? PaymentId { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public string ItemDetailsSummary
+        {
+            get
+            {
+                if (PurchaseInvoice?.Items != null && PurchaseInvoice.Items.Count > 0)
+                {
+                    return string.Join("; ", PurchaseInvoice.Items.Select(i => $"{i.ItemName} ({i.Quantity} {i.UnitName} @ Rs.{i.Rate:N0})"));
+                }
+                return string.Empty;
+            }
+        }
     }
 
     public class InventoryLedger

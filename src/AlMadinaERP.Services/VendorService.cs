@@ -161,6 +161,8 @@ namespace AlMadinaERP.Services
         public async Task<List<VendorLedger>> GetVendorLedgerAsync(int vendorId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             var query = _context.VendorLedgers
+                .Include(vl => vl.PurchaseInvoice!)
+                .ThenInclude(p => p.Items)
                 .Where(vl => vl.VendorId == vendorId);
 
             if (fromDate.HasValue)

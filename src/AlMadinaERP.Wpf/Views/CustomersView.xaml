@@ -534,6 +534,7 @@
                                                         <DataGridTextColumn Header="DEBIT (+)" Binding="{Binding Debit, StringFormat='PKR {0:N2}'}" Width="140" Foreground="#DC2626"/>
                                                         <DataGridTextColumn Header="CREDIT (-)" Binding="{Binding Credit, StringFormat='PKR {0:N2}'}" Width="140" Foreground="#16A34A"/>
                                                         <DataGridTextColumn Header="RUNNING BALANCE" Binding="{Binding RunningBalance, StringFormat='PKR {0:N2}'}" Width="160" FontWeight="Bold"/>
+                                                        <DataGridTextColumn Header="ITEMS / DETAILS" Binding="{Binding ItemDetailsSummary}" Width="250"/>
                                                         <DataGridTextColumn Header="REMARKS" Binding="{Binding Remarks}" Width="250"/>
                                                     </DataGrid.Columns>
                                                 </DataGrid>

@@ -1430,6 +1430,124 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
+        public async Task PrintSalaryStaffListAsync()
+        {
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            var headers = new[] { "Code", "Full Name", "CNIC", "Phone", "Designation", "Department", "Joining Date", "Basic Salary (PKR)" };
+            var rows = Staffs.Select(s => new[] { s.StaffCode, s.FullName, s.CNIC, s.Phone, s.Designation, s.Department, s.JoiningDate.ToString("dd/MM/yyyy"), $"Rs. {s.BasicSalary:N0}" });
+            var totalBasic = Staffs.Sum(s => s.BasicSalary);
+            var totals = new[] { "TOTAL STAFF", $"{Staffs.Count} Employees", "", "", "", "", "", $"Rs. {totalBasic:N0}" };
+            _printService.PrintReportTable("Salary Staff Register", headers, rows, totals, company);
+        }
+
+        [RelayCommand]
+        public void ExportSalaryStaffList()
+        {
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "CSV File (*.csv)|*.csv",
+                    FileName = $"Salary_Staff_List_{DateTime.Now:yyyyMMdd}.csv"
+                };
+                if (sfd.ShowDialog() == true)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine("Staff Code,Full Name,CNIC,Phone,Designation,Department,Joining Date,Basic Salary");
+                    foreach (var s in Staffs)
+                    {
+                        sb.AppendLine($"\"{s.StaffCode}\",\"{s.FullName}\",\"{s.CNIC}\",\"{s.Phone}\",\"{s.Designation}\",\"{s.Department}\",\"{s.JoiningDate:dd/MM/yyyy}\",{s.BasicSalary}");
+                    }
+                    System.IO.File.WriteAllText(sfd.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+                    System.Windows.MessageBox.Show($"Salary Staff List successfully exported to:\n{sfd.FileName}", "Export Successful", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Export failed: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        public async Task PrintSalaryAdvancesAsync()
+        {
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            var headers = new[] { "Voucher #", "Staff Name", "Department", "Date", "Recovery Month", "Amount (PKR)", "Status" };
+            var rows = SalaryAdvances.Select(a => new[] { a.VoucherNumber, a.StaffName, a.Department, a.Date.ToString("dd/MM/yyyy"), a.RecoveryMonth, $"Rs. {a.Amount:N0}", a.Status });
+            var totalAdv = SalaryAdvances.Sum(a => a.Amount);
+            var totals = new[] { "TOTAL ADVANCES", $"{SalaryAdvances.Count} Vouchers", "", "", "", $"Rs. {totalAdv:N0}", "" };
+            _printService.PrintReportTable("Salary Advances Report", headers, rows, totals, company);
+        }
+
+        [RelayCommand]
+        public void ExportSalaryAdvances()
+        {
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "CSV File (*.csv)|*.csv",
+                    FileName = $"Salary_Advances_{DateTime.Now:yyyyMMdd}.csv"
+                };
+                if (sfd.ShowDialog() == true)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine("Voucher Number,Staff Name,Department,Date,Recovery Month,Amount,Status,Remarks");
+                    foreach (var a in SalaryAdvances)
+                    {
+                        sb.AppendLine($"\"{a.VoucherNumber}\",\"{a.StaffName}\",\"{a.Department}\",\"{a.Date:dd/MM/yyyy}\",\"{a.RecoveryMonth}\",{a.Amount},\"{a.Status}\",\"{a.Remarks}\"");
+                    }
+                    System.IO.File.WriteAllText(sfd.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+                    System.Windows.MessageBox.Show($"Salary Advances successfully exported to:\n{sfd.FileName}", "Export Successful", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Export failed: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        public async Task PrintSalaryJournalAsync()
+        {
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            var headers = new[] { "Voucher #", "Date", "Account Name", "Remarks", "Debit (PKR)", "Credit (PKR)", "Status" };
+            var rows = JournalEntries.Select(j => new[] { j.VoucherNumber, j.Date.ToString("dd/MM/yyyy"), j.AccountName, j.Remarks, $"Rs. {j.Debit:N0}", $"Rs. {j.Credit:N0}", j.Status });
+            var totalDebit = JournalEntries.Sum(j => j.Debit);
+            var totalCredit = JournalEntries.Sum(j => j.Credit);
+            var totals = new[] { "JOURNAL TOTAL", $"{JournalEntries.Count} Entries", "", "", $"Rs. {totalDebit:N0}", $"Rs. {totalCredit:N0}", "" };
+            _printService.PrintReportTable("General Journal Report", headers, rows, totals, company);
+        }
+
+        [RelayCommand]
+        public void ExportSalaryJournal()
+        {
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "CSV File (*.csv)|*.csv",
+                    FileName = $"General_Journal_{DateTime.Now:yyyyMMdd}.csv"
+                };
+                if (sfd.ShowDialog() == true)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine("Voucher Number,Date,Account Name,Remarks,Debit,Credit,Status");
+                    foreach (var j in JournalEntries)
+                    {
+                        sb.AppendLine($"\"{j.VoucherNumber}\",\"{j.Date:dd/MM/yyyy}\",\"{j.AccountName}\",\"{j.Remarks}\",{j.Debit},{j.Credit},\"{j.Status}\"");
+                    }
+                    System.IO.File.WriteAllText(sfd.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+                    System.Windows.MessageBox.Show($"General Journal successfully exported to:\n{sfd.FileName}", "Export Successful", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Export failed: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
         public void CloseStaffLedger()
         {
             SubViewMode = SalarySubViewMode.StaffList;
