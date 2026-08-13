@@ -91,6 +91,21 @@ namespace AlMadinaERP.Data
             modelBuilder.Entity<VendorLedger>()
                 .HasIndex(vl => new { vl.VendorId, vl.Date });
 
+            modelBuilder.Entity<SaleInvoiceItem>()
+                .HasIndex(sii => new { sii.SaleInvoiceId, sii.ItemId });
+
+            modelBuilder.Entity<PurchaseInvoiceItem>()
+                .HasIndex(pii => new { pii.PurchaseInvoiceId, pii.ItemId });
+
+            modelBuilder.Entity<Receipt>()
+                .HasIndex(r => new { r.CustomerId, r.Date });
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => new { p.VendorId, p.Date });
+
+            modelBuilder.Entity<Salary>()
+                .HasIndex(s => new { s.StaffId, s.Date });
+
             // Decimal precision / SQLite numeric storage
             modelBuilder.Entity<Customer>().Property(c => c.OwesAmount).HasConversion<double>();
             modelBuilder.Entity<Customer>().Property(c => c.AdvanceAvailable).HasConversion<double>();
@@ -204,6 +219,8 @@ namespace AlMadinaERP.Data
             {
                 Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
                 Database.ExecuteSqlRaw("PRAGMA synchronous=NORMAL;");
+                Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
+                Database.ExecuteSqlRaw("PRAGMA cache_size=-64000;");
                 Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
                 Database.ExecuteSqlRaw("PRAGMA temp_store=MEMORY;");
                 Database.ExecuteSqlRaw("PRAGMA optimize;");

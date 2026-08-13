@@ -218,12 +218,9 @@ namespace AlMadinaERP.Wpf.ViewModels
             var returns = list.Where(i => i.Type == InvoiceType.SaleReturn).ToList();
             var posList = list.Where(i => i.Type == InvoiceType.POSCounterSale).ToList();
 
-            Invoices.Clear();
-            foreach (var inv in invoices) Invoices.Add(inv);
-            SaleReturns.Clear();
-            foreach (var ret in returns) SaleReturns.Add(ret);
-            PosSales.Clear();
-            foreach (var pos in posList) PosSales.Add(pos);
+            Invoices = new ObservableCollection<SaleInvoice>(invoices);
+            SaleReturns = new ObservableCollection<SaleInvoice>(returns);
+            PosSales = new ObservableCollection<SaleInvoice>(posList);
 
             TotalInvoicesCount = invoices.Count;
             PostedCount = invoices.Count(i => i.Status == "Posted");
@@ -243,14 +240,18 @@ namespace AlMadinaERP.Wpf.ViewModels
             GrandTotalSales = invoices.Sum(i => i.TotalAmount);
             GrandTotalReturns = returns.Sum(r => r.TotalAmount);
             GrandTotalPosSales = posList.Sum(p => p.TotalAmount);
-            
-            var custs = await _customerService.SearchCustomersAsync("");
-            Customers.Clear();
-            foreach (var c in custs) Customers.Add(c);
 
-            var items = await _inventoryService.SearchItemsAsync("");
-            AvailableItems.Clear();
-            foreach (var item in items) AvailableItems.Add(item);
+            if (Customers.Count == 0)
+            {
+                var custs = await _customerService.SearchCustomersAsync("");
+                Customers = new ObservableCollection<Customer>(custs);
+            }
+
+            if (AvailableItems.Count == 0)
+            {
+                var items = await _inventoryService.SearchItemsAsync("");
+                AvailableItems = new ObservableCollection<Item>(items);
+            }
         }
 
         partial void OnSelectedCustomerChanged(Customer? value)

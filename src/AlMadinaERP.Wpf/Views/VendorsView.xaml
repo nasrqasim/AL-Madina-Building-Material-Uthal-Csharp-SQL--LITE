@@ -474,7 +474,7 @@
                                     <TabItem Header="📦 Supplier Purchased Items Summary">
                                         <StackPanel Margin="0,12,0,0">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
-                                                <DataGrid ItemsSource="{Binding PurchasedItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1250" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                <DataGrid ItemsSource="{Binding PurchasedItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1250" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
                                                         <DataGridTextColumn Header="PURCHASE #" Binding="{Binding PurchaseNumber}" Width="140" FontWeight="Bold"/>
@@ -510,7 +510,7 @@
                                     <TabItem Header="💳 Payment &amp; Cash-Bank History">
                                         <StackPanel Margin="0,12,0,0">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
-                                                <DataGrid ItemsSource="{Binding PaymentHistory}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                <DataGrid ItemsSource="{Binding PaymentHistory}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
                                                         <DataGridTextColumn Header="VOUCHER #" Binding="{Binding VoucherNumber}" Width="150" FontWeight="Bold"/>
@@ -537,7 +537,7 @@
                                     <TabItem Header="📄 Outstanding Bills &amp; Payables">
                                         <StackPanel Margin="0,12,0,0">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
-                                                <DataGrid ItemsSource="{Binding OutstandingInvoices}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1150" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                <DataGrid ItemsSource="{Binding OutstandingInvoices}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1150" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="INVOICE DATE" Binding="{Binding InvoiceDate, StringFormat='yyyy-MM-dd'}" Width="140"/>
                                                         <DataGridTextColumn Header="PURCHASE #" Binding="{Binding InvoiceNumber}" Width="150" FontWeight="Bold"/>
@@ -569,7 +569,7 @@
                                     <TabItem Header="📕 Full Vendor Ledger Statement">
                                         <StackPanel Margin="0,12,0,0">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="460">
-                                                <DataGrid ItemsSource="{Binding VendorLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                                <DataGrid ItemsSource="{Binding VendorLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1" RowHeight="38" MinWidth="1100" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                                     <DataGrid.Columns>
                                                         <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
                                                         <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="160" FontWeight="Bold"/>

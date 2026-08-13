@@ -18,7 +18,7 @@ namespace AlMadinaERP.Wpf
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
         private static bool _hasShownUnhandledErrorDialog = false;
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             // PRIORITY 1 & 8: Global exception handling with infinite loop prevention
             DispatcherUnhandledException += (s, ev) =>
@@ -70,15 +70,15 @@ namespace AlMadinaERP.Wpf
 
                 ServiceProvider = services.BuildServiceProvider();
 
-                // Initialize Database synchronously on startup
+                // Initialize Database asynchronously on startup
                 using (var scope = ServiceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    dbContext.Database.EnsureCreated();
+                    await dbContext.Database.EnsureCreatedAsync();
                     dbContext.EnableOptimizations();
 
                     var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
-                    authService.EnsureSuperadminExistsAsync().GetAwaiter().GetResult();
+                    await authService.EnsureSuperadminExistsAsync();
                 }
 
                 var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();

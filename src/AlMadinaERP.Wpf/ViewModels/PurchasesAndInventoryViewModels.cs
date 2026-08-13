@@ -170,10 +170,8 @@ namespace AlMadinaERP.Wpf.ViewModels
             var invoices = list.Where(p => p.Type == PurchaseType.PurchaseInvoice).ToList();
             var returns = list.Where(p => p.Type == PurchaseType.PurchaseReturn).ToList();
 
-            Purchases.Clear();
-            foreach (var inv in invoices) Purchases.Add(inv);
-            PurchaseReturns.Clear();
-            foreach (var ret in returns) PurchaseReturns.Add(ret);
+            Purchases = new ObservableCollection<PurchaseInvoice>(invoices);
+            PurchaseReturns = new ObservableCollection<PurchaseInvoice>(returns);
 
             // Metrics for Invoices
             TotalInvoicesCount = invoices.Count;
@@ -186,13 +184,17 @@ namespace AlMadinaERP.Wpf.ViewModels
             PostedReturnsCount = returns.Count(r => r.Status == "Posted");
             DraftReturnsCount = returns.Count(r => r.Status == "Draft");
 
-            var vList = await _vendorService.SearchVendorsAsync("");
-            Vendors.Clear();
-            foreach (var v in vList) Vendors.Add(v);
+            if (Vendors.Count == 0)
+            {
+                var vList = await _vendorService.SearchVendorsAsync("");
+                Vendors = new ObservableCollection<Vendor>(vList);
+            }
 
-            var iList = await _inventoryService.SearchItemsAsync("");
-            AvailableItems.Clear();
-            foreach (var item in iList) AvailableItems.Add(item);
+            if (AvailableItems.Count == 0)
+            {
+                var iList = await _inventoryService.SearchItemsAsync("");
+                AvailableItems = new ObservableCollection<Item>(iList);
+            }
         }
 
         partial void OnSelectedVendorChanged(Vendor? value)
