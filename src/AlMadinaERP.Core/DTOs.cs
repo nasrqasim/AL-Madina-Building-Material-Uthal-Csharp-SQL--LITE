@@ -188,4 +188,14 @@ namespace AlMadinaERP.Core.DTOs
         public decimal BalanceDue { get; set; }
         public string Status { get; set; } = "Unpaid";
     }
+
+    public class SalaryLedgerRowDto
+    {
+        public DateTime Date { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal PaidOut { get; set; }
+        public decimal AdvanceReceived { get; set; }
+    }
 }
+

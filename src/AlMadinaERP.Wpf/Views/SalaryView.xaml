@@ -139,6 +139,39 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- 2 STAT CARDS FOR SALARY STAFF -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Left" Background="#EFF6FF" CornerRadius="20" Width="40" Height="40" Margin="0,0,12,0">
+                                <TextBlock Text="👥" Foreground="#2563EB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="TOTAL EMPLOYEES" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Staffs.Count}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Left" Background="#FEE2E2" CornerRadius="20" Width="40" Height="40" Margin="0,0,12,0">
+                                <TextBlock Text="💵" Foreground="#DC2626" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="GRAND TOTAL BASIC SALARY" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding TotalBasicSalaries, StringFormat='PKR {0:N0}'}" Foreground="#DC2626" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
                 <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
                     <StackPanel>
                         <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="320" HorizontalAlignment="Left" Height="34" Margin="0,0,0,14"/>

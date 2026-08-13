@@ -27,15 +27,6 @@ namespace AlMadinaERP.Wpf.ViewModels
         public decimal Amount { get; set; }
     }
 
-    public class SalaryLedgerRowDto
-    {
-        public DateTime Date { get; set; }
-        public string Type { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public decimal PaidOut { get; set; }
-        public decimal AdvanceReceived { get; set; }
-    }
-
     public enum SalarySubViewMode
     {
         StaffList,
@@ -1421,23 +1412,14 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (SelectedStaff == null) return;
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var headers = new[] { "Date", "Transaction Type", "Description", "Paid Out (PKR)", "Advance / Deduction (PKR)" };
-            var rows = StaffLedgerRows.Select(r => new[] { r.Date.ToString("yyyy-MM-dd"), r.Type, r.Description, $"Rs. {r.PaidOut:N0}", $"Rs. {r.AdvanceReceived:N0}" });
-            var totalPaid = StaffLedgerRows.Sum(r => r.PaidOut);
-            var totalAdv = StaffLedgerRows.Sum(r => r.AdvanceReceived);
-            var totals = new[] { "EMPLOYEE LEDGER TOTAL", SelectedStaff.FullName, $"{StaffLedgerRows.Count} Transactions", $"Rs. {totalPaid:N0}", $"Rs. {totalAdv:N0}" };
-            _printService.PrintReportTable($"Employee Salary Ledger - {SelectedStaff.FullName}", headers, rows, totals, company);
+            _printService.PrintStaffLedger(SelectedStaff, StaffLedgerRows, company);
         }
 
         [RelayCommand]
         public async Task PrintSalaryStaffListAsync()
         {
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var headers = new[] { "Code", "Full Name", "CNIC", "Phone", "Designation", "Department", "Joining Date", "Basic Salary (PKR)" };
-            var rows = Staffs.Select(s => new[] { s.StaffCode, s.FullName, s.CNIC, s.Phone, s.Designation, s.Department, s.JoiningDate.ToString("dd/MM/yyyy"), $"Rs. {s.BasicSalary:N0}" });
-            var totalBasic = Staffs.Sum(s => s.BasicSalary);
-            var totals = new[] { "TOTAL STAFF", $"{Staffs.Count} Employees", "", "", "", "", "", $"Rs. {totalBasic:N0}" };
-            _printService.PrintReportTable("Salary Staff Register", headers, rows, totals, company);
+            _printService.PrintSalaryStaffRegister(Staffs, company);
         }
 
         [RelayCommand]

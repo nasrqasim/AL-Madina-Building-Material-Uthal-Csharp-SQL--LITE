@@ -138,6 +138,8 @@ namespace AlMadinaERP.Core.Interfaces
         void PrintCustomerLedger(CustomerBalanceDto customer, IEnumerable<CustomerLedger> entries, CompanySetting company);
         void PrintVendorLedger(VendorBalanceDto vendor, IEnumerable<VendorLedger> entries, CompanySetting company);
         void PrintInventoryLedger(Item item, IEnumerable<InventoryLedger> entries, CompanySetting company);
+        void PrintStaffLedger(Staff staff, IEnumerable<SalaryLedgerRowDto> entries, CompanySetting company);
+        void PrintSalaryStaffRegister(IEnumerable<Staff> staffs, CompanySetting company);
         void PrintReportTable(string title, IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows, IEnumerable<string>? totalsRow, CompanySetting company);
     }
 
