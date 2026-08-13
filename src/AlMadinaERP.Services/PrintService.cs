@@ -239,23 +239,27 @@ namespace AlMadinaERP.Services
 
                     doc.Blocks.Add(new Paragraph(new Run("--------------------------------------------------")) { Margin = new Thickness(0, 2, 0, 4) });
 
-                    // Received, Remaining Balance & Cash Back
-                    decimal remainingBal = Math.Max(0m, invoice.TotalAmount - invoice.PaidAmount);
+                    // Received, Remaining Amount & Cash Back
+                    decimal remainingBal = Math.Max(0m, invoice.TotalAmount - invoice.PaidAmount - invoice.AdvanceUsed);
 
                     var paidPar = new Paragraph();
                     paidPar.Margin = new Thickness(0, 4, 0, 4);
-                    paidPar.Inlines.Add(new Run("Amount Received") { FontSize = 11 });
-                    paidPar.Inlines.Add(new Run($"                              {invoice.PaidAmount:N2}\n") { FontSize = 11 });
+                    paidPar.Inlines.Add(new Run("Amount Received PKR") { FontSize = 11 });
+                    paidPar.Inlines.Add(new Run($"                             {invoice.PaidAmount:N2}\n") { FontSize = 11 });
 
-                    if (remainingBal > 0)
+                    if (invoice.AdvanceUsed > 0)
                     {
-                        paidPar.Inlines.Add(new Run("Remaining Balance PKR") { FontSize = 11, FontWeight = FontWeights.Bold });
-                        paidPar.Inlines.Add(new Run($"                     {remainingBal:N2}\n") { FontSize = 12, FontWeight = FontWeights.Bold });
+                        paidPar.Inlines.Add(new Run("Advance Used PKR") { FontSize = 11 });
+                        paidPar.Inlines.Add(new Run($"                            {invoice.AdvanceUsed:N2}\n") { FontSize = 11 });
                     }
-                    else
+
+                    paidPar.Inlines.Add(new Run("REMAINING AMOUNT PKR") { FontSize = 12, FontWeight = FontWeights.Bold });
+                    paidPar.Inlines.Add(new Run($"                   {remainingBal:N2}\n") { FontSize = 13, FontWeight = FontWeights.Bold });
+
+                    if (cashBack > 0)
                     {
                         paidPar.Inlines.Add(new Run("Cash Back PKR") { FontSize = 11 });
-                        paidPar.Inlines.Add(new Run($"                                  {cashBack:N2}\n") { FontSize = 11 });
+                        paidPar.Inlines.Add(new Run($"                               {cashBack:N2}\n") { FontSize = 11 });
                     }
                     doc.Blocks.Add(paidPar);
 
