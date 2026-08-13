@@ -1261,6 +1261,9 @@ namespace AlMadinaERP.Wpf.ViewModels
             }
         }
 
+        [ObservableProperty]
+        private string _addOrEditStaffTitle = "+ Add New Salary Staff";
+
         [RelayCommand]
         public void OpenAddStaffModal()
         {
@@ -1271,6 +1274,47 @@ namespace AlMadinaERP.Wpf.ViewModels
                 EmploymentStatus = "Permanent",
                 IsActive = true
             };
+            AddOrEditStaffTitle = "+ Add New Salary Staff";
+            IsAddStaffModalOpen = true;
+        }
+
+        [RelayCommand]
+        public void OpenEditStaffModal(Staff staff)
+        {
+            if (staff == null) return;
+            NewStaff = new Staff
+            {
+                Id = staff.Id,
+                StaffCode = staff.StaffCode,
+                FullName = staff.FullName,
+                CNIC = staff.CNIC,
+                Phone = staff.Phone,
+                Email = staff.Email,
+                City = staff.City,
+                Address = staff.Address,
+                Designation = staff.Designation,
+                Department = staff.Department,
+                Grade = staff.Grade,
+                JoiningDate = staff.JoiningDate,
+                EmploymentStatus = staff.EmploymentStatus,
+                LinkedOperationalEmployee = staff.LinkedOperationalEmployee,
+                IsActive = staff.IsActive,
+                BankName = staff.BankName,
+                AccountNumber = staff.AccountNumber,
+                IBAN = staff.IBAN,
+                NTN = staff.NTN,
+                EOBINumber = staff.EOBINumber,
+                SESSINumber = staff.SESSINumber,
+                ProvidentFundNumber = staff.ProvidentFundNumber,
+                BasicSalary = staff.BasicSalary,
+                AllowancesText = staff.AllowancesText,
+                DeductionsText = staff.DeductionsText,
+                TotalSalaryPaid = staff.TotalSalaryPaid,
+                TotalAdvances = staff.TotalAdvances,
+                TotalLoans = staff.TotalLoans,
+                LoanOutstanding = staff.LoanOutstanding
+            };
+            AddOrEditStaffTitle = "✏️ Edit Salary Staff Details";
             IsAddStaffModalOpen = true;
         }
 
@@ -1992,7 +2036,117 @@ namespace AlMadinaERP.Wpf.ViewModels
             TotalCustomerAdvance = cBalances.Sum(c => c.AdvanceAvailable);
             NetCustomerBalance = TotalCustomerReceivable - TotalCustomerAdvance;
 
+            await LoadStaffReportsAsync();
             await LoadJournalActivitiesAsync();
+        }
+
+        [ObservableProperty]
+        private ObservableCollection<Staff> _staffReports = new();
+
+        [ObservableProperty]
+        private Staff? _selectedStaffReport;
+
+        [ObservableProperty]
+        private ObservableCollection<SalaryLedgerRowDto> _staffLedgerReportEntries = new();
+
+        [ObservableProperty]
+        private bool _isStaffLedgerModalOpen;
+
+        [ObservableProperty]
+        private string _staffReportSearchQuery = string.Empty;
+
+        [ObservableProperty]
+        private decimal _totalStaffBasicSalary = 0m;
+
+        [ObservableProperty]
+        private int _totalStaffCount = 0;
+
+        private System.Threading.CancellationTokenSource? _staffReportSearchCts;
+
+        partial void OnStaffReportSearchQueryChanged(string value)
+        {
+            _staffReportSearchCts?.Cancel();
+            _staffReportSearchCts = new System.Threading.CancellationTokenSource();
+            var token = _staffReportSearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadStaffReportsAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
+        }
+
+        public async Task LoadStaffReportsAsync()
+        {
+            var list = await _salaryService.GetStaffsAsync(StaffReportSearchQuery);
+            StaffReports = new ObservableCollection<Staff>(list);
+            TotalStaffCount = list.Count;
+            TotalStaffBasicSalary = list.Sum(s => s.BasicSalary);
+        }
+
+        [RelayCommand]
+        public async Task ViewStaffReportLedgerAsync(Staff staff)
+        {
+            if (staff == null) return;
+            SelectedStaffReport = staff;
+
+            var rows = new List<SalaryLedgerRowDto>();
+            var salaries = await _salaryService.GetSalariesAsync();
+            var staffSalaries = salaries.Where(s => s.StaffId == staff.Id || (s.StaffName != null && s.StaffName.Equals(staff.FullName, StringComparison.OrdinalIgnoreCase)));
+            foreach (var s in staffSalaries)
+            {
+                rows.Add(new SalaryLedgerRowDto
+                {
+                    Date = s.Date,
+                    Type = "Salary Payment",
+                    Description = string.IsNullOrWhiteSpace(s.Remarks) ? $"{s.SalaryMonth} Salary" : s.Remarks,
+                    PaidOut = s.NetPaid,
+                    AdvanceReceived = s.AdvanceDeduction
+                });
+            }
+
+            var advances = await _salaryService.GetSalaryAdvancesAsync();
+            var staffAdvances = advances.Where(a => a.StaffId == staff.Id || (a.StaffName != null && a.StaffName.Equals(staff.FullName, StringComparison.OrdinalIgnoreCase)));
+            foreach (var a in staffAdvances)
+            {
+                rows.Add(new SalaryLedgerRowDto
+                {
+                    Date = a.Date,
+                    Type = "Salary Advance",
+                    Description = $"Advance Taken (Recovery: {a.RecoveryMonth}) - {a.Remarks}",
+                    PaidOut = a.Amount,
+                    AdvanceReceived = 0m
+                });
+            }
+
+            StaffLedgerReportEntries = new ObservableCollection<SalaryLedgerRowDto>(rows.OrderByDescending(r => r.Date));
+            IsStaffLedgerModalOpen = true;
+        }
+
+        [RelayCommand]
+        public void CloseStaffLedgerReport()
+        {
+            IsStaffLedgerModalOpen = false;
+        }
+
+        [RelayCommand]
+        public async Task PrintStaffReportLedgerAsync()
+        {
+            if (SelectedStaffReport == null) return;
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            _printService.PrintStaffLedger(SelectedStaffReport, StaffLedgerReportEntries, company);
+        }
+
+        [RelayCommand]
+        public async Task PrintSalaryStaffRegisterCommandAsync()
+        {
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            _printService.PrintSalaryStaffRegister(StaffReports, company);
         }
 
         [RelayCommand]

@@ -192,12 +192,13 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="ACTIONS" Width="220">
+                                <DataGridTemplateColumn Header="ACTIONS" Width="270">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal">
                                                 <Button Command="{Binding DataContext.OpenPaySalaryModalCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="$ PAY SALARY" Background="#059669" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Margin="2,0" Cursor="Hand"/>
                                                 <Button Command="{Binding DataContext.ViewStaffLedgerCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="👁️ VIEW LEDGER" Background="#2563EB" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Margin="2,0" Cursor="Hand"/>
+                                                <Button Command="{Binding DataContext.OpenEditStaffModalCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="✏️ EDIT" Background="#D97706" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Margin="2,0" Cursor="Hand"/>
                                                 <Button Command="{Binding DataContext.DeleteStaffCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="4,2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand"/>
                                             </StackPanel>
                                         </DataTemplate>
@@ -475,7 +476,7 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <Grid Margin="0,0,0,16">
-                            <TextBlock Text="New Salary Staff" Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding AddOrEditStaffTitle, FallbackValue='New Salary Staff'}" Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
                             <Button Command="{Binding CloseAddStaffModalCommand}" Content="✕" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" Padding="4,0" Cursor="Hand"/>
                         </Grid>
 

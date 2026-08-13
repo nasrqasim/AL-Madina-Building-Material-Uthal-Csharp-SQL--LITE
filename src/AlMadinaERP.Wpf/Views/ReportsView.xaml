@@ -359,6 +359,95 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
+            <!-- ============================================================== -->
+            <!-- TAB 7: SALARY STAFF REPORT (SEARCH & LEDGER)                   -->
+            <!-- ============================================================== -->
+            <TabItem Header="Salary Staff Report">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Salary Staff Payroll &amp; Ledger Report" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="Comprehensive overview of staff salary structures, payments, advances, and full ledgers." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintSalaryStaffRegisterCommand}" Content="🖨️ Print Register" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- STAT CARDS -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Left" Background="#EFF6FF" CornerRadius="20" Width="40" Height="40" Margin="0,0,12,0">
+                                        <TextBlock Text="👥" Foreground="#2563EB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="TOTAL EMPLOYEES" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalStaffCount}" Foreground="#0F172A" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Left" Background="#FEE2E2" CornerRadius="20" Width="40" Height="40" Margin="0,0,12,0">
+                                        <TextBlock Text="💵" Foreground="#DC2626" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="TOTAL BASIC SALARIES" Foreground="#64748B" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalStaffBasicSalary, StringFormat='PKR {0:N0}'}" Foreground="#DC2626" FontSize="20" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="360"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding StaffReportSearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,10,0"/>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding StaffReports}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="42" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="STAFF CODE" Binding="{Binding StaffCode}" Width="120" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="NAME" Binding="{Binding FullName}" Width="180" FontWeight="Bold"/>
+                                        <DataGridTextColumn Header="DESIGNATION / DEPT" Binding="{Binding Designation}" Width="*"/>
+                                        <DataGridTextColumn Header="JOINING DATE" Binding="{Binding JoiningDate, StringFormat='dd/MM/yyyy'}" Width="120"/>
+                                        <DataGridTextColumn Header="BASIC SALARY" Binding="{Binding BasicSalary, StringFormat='PKR {0:N0}'}" Width="140" FontWeight="Bold" Foreground="#DC2626"/>
+                                        <DataGridTemplateColumn Header="STATUS" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#DCFCE7" CornerRadius="12" Padding="8,3" HorizontalAlignment="Left">
+                                                        <TextBlock Text="ACTIVE" Foreground="#15803D" FontSize="10" FontWeight="Bold"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="ACTION" Width="150">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.ViewStaffReportLedgerCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="👁️ VIEW LEDGER" Background="#2563EB" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="8,4" Cursor="Hand"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
 
         <!-- ============================================================== -->
@@ -510,6 +599,75 @@
                                     <DataGridTextColumn Header="UNIT" Binding="{Binding Unit}" Width="70"/>
                                     <DataGridTextColumn Header="STOCK BALANCE" Binding="{Binding RunningBalance, StringFormat='{}{0:N0}'}" Width="110" FontWeight="Bold"/>
                                     <DataGridTextColumn Header="REMARKS / WAREHOUSE" Binding="{Binding Remarks}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <!-- ============================================================== -->
+        <!-- MODAL 4: STAFF SALARY LEDGER OVERLAY                           -->
+        <!-- ============================================================== -->
+        <Grid Background="#80000000" Visibility="{Binding IsStaffLedgerModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="940" MaxHeight="800" VerticalAlignment="Center" Padding="0" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="20,16" Background="#7A0C0C" CornerRadius="12,12,0,0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedStaffReport.FullName, StringFormat='Staff Salary Ledger — {0}'}" Foreground="#FFFFFF" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedStaffReport.StaffCode, StringFormat='Code: {0} | Complete Transaction History &amp; Running Ledger'}" Foreground="#FDE047" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintStaffReportLedgerCommand}" Content="🖨️ Print Ledger" Background="#FFFFFF" Foreground="#0F172A" FontWeight="Bold" Padding="10,4" Margin="0,0,10,0" Cursor="Hand"/>
+                                <Button Command="{Binding CloseStaffLedgerReportCommand}" Content="✕" Background="Transparent" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold" Padding="4,0" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" Padding="16,12" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <Button Command="{Binding CloseStaffLedgerReportCommand}" Content="Close Ledger" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,8" HorizontalAlignment="Right" Cursor="Hand"/>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                        <StackPanel>
+                            <!-- Staff Summary Header Cards -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="BASIC SALARY" Foreground="#DC2626" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedStaffReport.BasicSalary, StringFormat='PKR {0:N0}'}" Foreground="#DC2626" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="DESIGNATION &amp; DEPT" Foreground="#16A34A" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedStaffReport.Designation}" Foreground="#16A34A" FontSize="14" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedStaffReport.Department}" Foreground="#475569" FontSize="11"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="4" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="CNIC &amp; PHONE" Foreground="#2563EB" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedStaffReport.CNIC}" Foreground="#2563EB" FontSize="13" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedStaffReport.Phone}" Foreground="#475569" FontSize="11"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <DataGrid ItemsSource="{Binding StaffLedgerReportEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='dd/MM/yyyy'}" Width="110"/>
+                                    <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding Type}" Width="140" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="DESCRIPTION / REMARKS" Binding="{Binding Description}" Width="*"/>
+                                    <DataGridTextColumn Header="PAID OUT (+)" Binding="{Binding PaidOut, StringFormat='PKR {0:N0}'}" Width="130" FontWeight="Bold" Foreground="#16A34A"/>
+                                    <DataGridTextColumn Header="ADVANCE / DEDUCTION (-)" Binding="{Binding AdvanceReceived, StringFormat='PKR {0:N0}'}" Width="160" FontWeight="Bold" Foreground="#DC2626"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </StackPanel>
