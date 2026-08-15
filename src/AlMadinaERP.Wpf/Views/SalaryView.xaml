@@ -260,11 +260,12 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="ACTIONS" Width="80">
+                                <DataGridTemplateColumn Header="ACTIONS" Width="140">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal">
-                                                <Button Command="{Binding DataContext.DeleteSalaryAdvanceCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand"/>
+                                                <Button Command="{Binding DataContext.OpenEditAdvanceFormCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="✏️ EDIT" Background="#D97706" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold" Padding="6,3" Margin="2,0" Cursor="Hand"/>
+                                                <Button Command="{Binding DataContext.DeleteSalaryAdvanceCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="4,2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -293,7 +294,7 @@
 
             <StackPanel HorizontalAlignment="Center" Width="840">
                 <Grid Margin="0,0,0,16">
-                    <TextBlock Text="New Salary Advance Request" Foreground="#0F172A" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding AddOrEditAdvanceTitle, FallbackValue='New Salary Advance Request'}" Foreground="#0F172A" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Command="{Binding CloseAdvanceFormCommand}" Content="Cancel" Background="#E2E8F0" Foreground="#1E293B" Padding="14,6" Margin="0,0,8,0" Cursor="Hand"/>
                         <Button Command="{Binding SaveSalaryAdvanceCommand}" Content="Submit Advance Request" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,6" Cursor="Hand"/>
@@ -314,7 +315,7 @@
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="ADVANCE AMOUNT *" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
-                                <TextBox Text="{Binding NewSalaryAdvance.Amount, StringFormat='{}{0:0.00}'}" Height="34" Margin="0,4,0,0"/>
+                                <TextBox Text="{Binding NewSalaryAdvance.Amount, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Grid>
 
@@ -558,7 +559,7 @@
                         <!-- SALARY STRUCTURE -->
                         <TextBlock Text="💵 SALARY STRUCTURE" Foreground="#7A0C0C" FontSize="11" FontWeight="Bold" Margin="0,10,0,10"/>
                         <TextBlock Text="BASIC SALARY *" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
-                        <TextBox Text="{Binding NewStaff.BasicSalary, StringFormat='{}{0:0.00}'}" Height="34" Margin="0,4,0,16"/>
+                        <TextBox Text="{Binding NewStaff.BasicSalary, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,4,0,16"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                             <Button Command="{Binding CloseAddStaffModalCommand}" Content="Cancel" Background="#E2E8F0" Foreground="#1E293B" Padding="16,8" Margin="0,0,8,0" Cursor="Hand"/>

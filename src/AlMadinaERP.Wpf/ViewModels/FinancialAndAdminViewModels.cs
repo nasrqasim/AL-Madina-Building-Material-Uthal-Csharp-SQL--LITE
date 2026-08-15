@@ -1312,6 +1312,9 @@ namespace AlMadinaERP.Wpf.ViewModels
             }
         }
 
+        [ObservableProperty]
+        private string _addOrEditAdvanceTitle = "+ New Salary Advance Request";
+
         [RelayCommand]
         public void OpenNewAdvanceForm()
         {
@@ -1322,6 +1325,34 @@ namespace AlMadinaERP.Wpf.ViewModels
                 RecoveryMonth = DateTime.Now.ToString("MMMM yyyy"),
                 Status = "Approved"
             };
+            AddOrEditAdvanceTitle = "+ New Salary Advance Request";
+            SelectedStaff = Staffs.FirstOrDefault();
+            SubViewMode = SalarySubViewMode.AdvanceForm;
+        }
+
+        [RelayCommand]
+        public void OpenEditAdvanceForm(SalaryAdvance advance)
+        {
+            if (advance == null) return;
+            NewSalaryAdvance = new SalaryAdvance
+            {
+                Id = advance.Id,
+                VoucherNumber = advance.VoucherNumber,
+                Date = advance.Date,
+                StaffId = advance.StaffId,
+                StaffName = advance.StaffName,
+                Department = advance.Department,
+                Amount = advance.Amount,
+                RecoveryMonth = advance.RecoveryMonth,
+                Remarks = advance.Remarks,
+                Status = advance.Status
+            };
+            AddOrEditAdvanceTitle = "✏️ Edit Salary Advance Request";
+            if (advance.StaffId.HasValue)
+                SelectedStaff = Staffs.FirstOrDefault(s => s.Id == advance.StaffId.Value);
+            else if (!string.IsNullOrEmpty(advance.StaffName))
+                SelectedStaff = Staffs.FirstOrDefault(s => s.FullName == advance.StaffName);
+
             SubViewMode = SalarySubViewMode.AdvanceForm;
         }
 
@@ -1355,8 +1386,17 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (advance != null)
             {
-                await _service.DeleteSalaryAdvanceAsync(advance.Id);
-                await LoadSalariesAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete salary advance voucher '{advance.VoucherNumber}'?",
+                    "Confirm Delete Salary Advance",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    await _service.DeleteSalaryAdvanceAsync(advance.Id);
+                    await LoadSalariesAsync();
+                }
             }
         }
 

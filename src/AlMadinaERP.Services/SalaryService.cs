@@ -144,19 +144,23 @@ namespace AlMadinaERP.Services
             else
                 _context.SalaryAdvances.Update(advance);
 
+            await _context.SaveChangesAsync();
+
             if (advance.StaffId.HasValue && advance.StaffId.Value > 0)
             {
                 var staff = await _context.Staffs.FindAsync(advance.StaffId.Value);
                 if (staff != null)
                 {
-                    staff.TotalAdvances += advance.Amount;
+                    staff.TotalAdvances = await _context.SalaryAdvances
+                        .Where(sa => sa.StaffId == staff.Id)
+                        .SumAsync(sa => (decimal?)sa.Amount) ?? 0m;
                     advance.StaffName = staff.FullName;
                     advance.Department = staff.Department;
                     _context.Staffs.Update(staff);
+                    await _context.SaveChangesAsync();
                 }
             }
 
-            await _context.SaveChangesAsync();
             return advance;
         }
 
@@ -165,8 +169,22 @@ namespace AlMadinaERP.Services
             var item = await _context.SalaryAdvances.FindAsync(id);
             if (item != null)
             {
+                int? staffId = item.StaffId;
                 _context.SalaryAdvances.Remove(item);
                 await _context.SaveChangesAsync();
+
+                if (staffId.HasValue && staffId.Value > 0)
+                {
+                    var staff = await _context.Staffs.FindAsync(staffId.Value);
+                    if (staff != null)
+                    {
+                        staff.TotalAdvances = await _context.SalaryAdvances
+                            .Where(sa => sa.StaffId == staff.Id)
+                            .SumAsync(sa => (decimal?)sa.Amount) ?? 0m;
+                        _context.Staffs.Update(staff);
+                        await _context.SaveChangesAsync();
+                    }
+                }
             }
         }
 
