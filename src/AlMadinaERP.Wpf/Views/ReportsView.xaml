@@ -256,7 +256,7 @@
                                     <TextBox Text="{Binding VendorSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="300" HorizontalAlignment="Left" Height="34"/>
                                 </Grid>
 
-                                <DataGrid ItemsSource="{Binding VendorBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38">
+                                <DataGrid ItemsSource="{Binding VendorBalances}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="360" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="VENDOR CODE" Binding="{Binding Code}" Width="130" FontWeight="Bold"/>
                                         <DataGridTextColumn Header="VENDOR NAME" Binding="{Binding Name}" Width="*" MinWidth="200"/>
@@ -331,7 +331,7 @@
                         <!-- ACTIVITIES TABLE -->
                         <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
                             <StackPanel>
-                                <DataGrid ItemsSource="{Binding JournalActivities}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="36">
+                                <DataGrid ItemsSource="{Binding JournalActivities}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="36" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="DATE &amp; TIME" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="140"/>
                                         <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="150" FontWeight="Bold"/>
@@ -589,7 +589,7 @@
                                 </Border>
                             </Grid>
 
-                            <DataGrid ItemsSource="{Binding InventoryLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320">
+                            <DataGrid ItemsSource="{Binding InventoryLedgerEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm'}" Width="130"/>
                                     <DataGridTextColumn Header="TRAN. NO." Binding="{Binding VoucherNumber}" Width="110"/>
@@ -661,7 +661,7 @@
                                 </Border>
                             </Grid>
 
-                            <DataGrid ItemsSource="{Binding StaffLedgerReportEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320">
+                            <DataGrid ItemsSource="{Binding StaffLedgerReportEntries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="320" RowHeight="38" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='dd/MM/yyyy'}" Width="110"/>
                                     <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding Type}" Width="140" FontWeight="Bold"/>

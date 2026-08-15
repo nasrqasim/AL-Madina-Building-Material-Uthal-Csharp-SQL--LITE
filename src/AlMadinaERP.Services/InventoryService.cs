@@ -251,8 +251,9 @@ namespace AlMadinaERP.Services
                 q = q.Where(l => l.Date <= toDate.Value);
 
             return await q
-                .OrderBy(l => l.Date)
-                .ThenBy(l => l.Id)
+                .OrderByDescending(l => l.Date)
+                .ThenByDescending(l => l.Id)
+                .Take(1000)
                 .AsNoTracking()
                 .ToListAsync();
         }

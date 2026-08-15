@@ -1977,67 +1977,96 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
+        partial void OnSelectedTabIndexChanged(int value)
+        {
+            _ = LoadActiveTabReportAsync(value);
+        }
+
         public async Task GenerateReportsAsync()
+        {
+            await LoadActiveTabReportAsync(SelectedTabIndex);
+        }
+
+        private async Task LoadActiveTabReportAsync(int tabIndex)
         {
             var from = new DateTime(2026, 1, 1);
             var to = DateTime.Now;
 
-            BalanceSheet = await _reportService.GetBalanceSheetReportAsync(to);
-            ProfitAndLoss = await _reportService.GetProfitLossReportAsync(from, to);
+            try
+            {
+                switch (tabIndex)
+                {
+                    case 0: // Inventory Ledger
+                        {
+                            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery);
+                            InventoryItems = new ObservableCollection<Item>(items);
+                            TotalInventoryItemsCount = items.Count;
+                            TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
+                            TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
 
-            var itemPL = await _reportService.GetItemWiseProfitLossAsync(from, to);
-            ItemWiseProfitLoss = new ObservableCollection<ItemProfitLossDto>(itemPL);
-
-            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery);
-            InventoryItems = new ObservableCollection<Item>(items);
-
-            TotalInventoryItemsCount = items.Count;
-            TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
-            TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
-
-            var alerts = await _inventoryService.GetLowStockAlertsAsync();
-            LowStockAlerts = new ObservableCollection<LowStockItemDto>(alerts);
-            ItemsLowStockCount = alerts.Count;
-
-            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(from, to);
-            InventoryLedgerEntries = new ObservableCollection<InventoryLedger>(invLedgerList);
-
-            var jList = await _salaryService.GetJournalEntriesAsync("");
-            JournalEntries = new ObservableCollection<JournalEntry>(jList);
-
-            TotalJournalCount = jList.Count;
-            TotalJournalDebits = jList.Sum(j => j.Debit);
-            TotalJournalCredits = jList.Sum(j => j.Credit);
-
-            var pList = await _purchaseService.SearchPurchasesAsync("");
-            PurchaseInvoices = new ObservableCollection<PurchaseInvoice>(pList);
-
-            TotalPurchaseInvoicesCount = pList.Count;
-            TotalPurchaseGrossAmount = pList.Sum(p => p.TotalAmount);
-            TotalPurchaseDiscount = pList.Sum(p => p.DiscountAmount);
-            TotalPurchaseNetAmount = pList.Sum(p => p.NetAmount);
-
-            var sList = await _saleService.SearchInvoicesAsync("");
-            SaleInvoices = new ObservableCollection<SaleInvoice>(sList);
-            TotalPosSales = sList.Sum(s => s.NetAmount);
-            TotalPosCashSales = TotalPosSales;
-
-            var vBalances = await _vendorService.GetVendorBalancesAsync(VendorSearchQuery);
-            VendorBalances = new ObservableCollection<VendorBalanceDto>(vBalances);
-            TotalVendorsCount = vBalances.Count;
-            TotalVendorPayableWeOwe = vBalances.Sum(v => v.VendorOwes);
-            TotalVendorAdvanceVendorOwes = vBalances.Sum(v => v.AdvanceAvailable);
-            TotalVendorPurchasesAmount = pList.Sum(p => p.TotalAmount);
-
-            var cBalances = await _customerService.GetCustomerBalancesAsync(CustomerSearchQuery);
-            CustomerBalances = new ObservableCollection<CustomerBalanceDto>(cBalances);
-            CustomersWithBalanceCount = cBalances.Count(c => c.CustomerOwes > 0 || c.AdvanceAvailable > 0);
-            TotalCustomerReceivable = cBalances.Sum(c => c.CustomerOwes);
-            TotalCustomerAdvance = cBalances.Sum(c => c.AdvanceAvailable);
-            NetCustomerBalance = TotalCustomerReceivable - TotalCustomerAdvance;
-
-            await LoadStaffReportsAsync();
-            await LoadJournalActivitiesAsync();
+                            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(from, to);
+                            InventoryLedgerEntries = new ObservableCollection<InventoryLedger>(invLedgerList);
+                            break;
+                        }
+                    case 1: // Inventory Balances
+                        {
+                            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery);
+                            InventoryItems = new ObservableCollection<Item>(items);
+                            TotalInventoryItemsCount = items.Count;
+                            TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
+                            TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
+                            break;
+                        }
+                    case 2: // Low Stock Alert
+                        {
+                            var alerts = await _inventoryService.GetLowStockAlertsAsync();
+                            LowStockAlerts = new ObservableCollection<LowStockItemDto>(alerts);
+                            ItemsLowStockCount = alerts.Count;
+                            break;
+                        }
+                    case 3: // Customer Balances
+                        {
+                            var cBalances = await _customerService.GetCustomerBalancesAsync(CustomerSearchQuery);
+                            CustomerBalances = new ObservableCollection<CustomerBalanceDto>(cBalances);
+                            CustomersWithBalanceCount = cBalances.Count(c => c.CustomerOwes > 0 || c.AdvanceAvailable > 0);
+                            TotalCustomerReceivable = cBalances.Sum(c => c.CustomerOwes);
+                            TotalCustomerAdvance = cBalances.Sum(c => c.AdvanceAvailable);
+                            NetCustomerBalance = TotalCustomerReceivable - TotalCustomerAdvance;
+                            break;
+                        }
+                    case 4: // Vendor Balances
+                        {
+                            var vBalances = await _vendorService.GetVendorBalancesAsync(VendorSearchQuery);
+                            VendorBalances = new ObservableCollection<VendorBalanceDto>(vBalances);
+                            TotalVendorsCount = vBalances.Count;
+                            TotalVendorPayableWeOwe = vBalances.Sum(v => v.VendorOwes);
+                            TotalVendorAdvanceVendorOwes = vBalances.Sum(v => v.AdvanceAvailable);
+                            break;
+                        }
+                    case 5: // Journal / Activity
+                        {
+                            await LoadJournalActivitiesAsync();
+                            break;
+                        }
+                    case 6: // Salary Staff Report
+                        {
+                            await LoadStaffReportsAsync();
+                            break;
+                        }
+                    default:
+                        {
+                            BalanceSheet = await _reportService.GetBalanceSheetReportAsync(to);
+                            ProfitAndLoss = await _reportService.GetProfitLossReportAsync(from, to);
+                            var itemPL = await _reportService.GetItemWiseProfitLossAsync(from, to);
+                            ItemWiseProfitLoss = new ObservableCollection<ItemProfitLossDto>(itemPL);
+                            break;
+                        }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Report Load Error (Tab {tabIndex}): {ex.Message}");
+            }
         }
 
         [ObservableProperty]
