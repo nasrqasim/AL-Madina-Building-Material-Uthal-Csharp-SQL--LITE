@@ -103,6 +103,10 @@ namespace AlMadinaERP.Core.Models
 
         public void RecalculateTotals()
         {
+            if (Items != null && Items.Count > 0)
+            {
+                _subtotal = Items.Sum(i => i.TotalPrice);
+            }
             TotalAmount = Math.Max(0m, (Subtotal - DiscountAmount) + TaxAmount + ExtraExpenses + VehicleCharges);
             BalanceDue = Math.Max(0m, TotalAmount - AmountPaid);
         }
@@ -257,7 +261,7 @@ namespace AlMadinaERP.Core.Models
             {
                 if (_rate == value) return;
                 _rate = value;
-                if (IsSpecialLengthItem && RatePerFoot != value)
+                if (IsSpecialLengthItem && value > 0 && RatePerFoot != value)
                 {
                     _ratePerFoot = value;
                     OnPropertyChanged(nameof(RatePerFoot));
