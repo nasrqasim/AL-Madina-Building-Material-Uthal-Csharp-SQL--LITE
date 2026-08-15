@@ -87,10 +87,20 @@ namespace AlMadinaERP.Services
             }
 
             if (staff.Id == 0)
+            {
                 await _context.Staffs.AddAsync(staff);
+            }
             else
             {
-                _context.Staffs.Update(staff);
+                var trackedStaff = await _context.Staffs.FindAsync(staff.Id);
+                if (trackedStaff != null)
+                {
+                    _context.Entry(trackedStaff).CurrentValues.SetValues(staff);
+                }
+                else
+                {
+                    _context.Staffs.Update(staff);
+                }
 
                 var existingSalaries = await _context.Salaries.Where(s => s.StaffId == staff.Id).ToListAsync();
                 foreach (var sal in existingSalaries)
@@ -155,9 +165,21 @@ namespace AlMadinaERP.Services
             }
 
             if (advance.Id == 0)
+            {
                 await _context.SalaryAdvances.AddAsync(advance);
+            }
             else
-                _context.SalaryAdvances.Update(advance);
+            {
+                var trackedAdv = await _context.SalaryAdvances.FindAsync(advance.Id);
+                if (trackedAdv != null)
+                {
+                    _context.Entry(trackedAdv).CurrentValues.SetValues(advance);
+                }
+                else
+                {
+                    _context.SalaryAdvances.Update(advance);
+                }
+            }
 
             await _context.SaveChangesAsync();
 
@@ -171,7 +193,6 @@ namespace AlMadinaERP.Services
                         .SumAsync(sa => (double?)sa.Amount) ?? 0);
                     advance.StaffName = staff.FullName;
                     advance.Department = staff.Department;
-                    _context.Staffs.Update(staff);
                     await _context.SaveChangesAsync();
                 }
             }
@@ -196,7 +217,6 @@ namespace AlMadinaERP.Services
                         staff.TotalAdvances = (decimal)(await _context.SalaryAdvances
                             .Where(sa => sa.StaffId == staff.Id)
                             .SumAsync(sa => (double?)sa.Amount) ?? 0);
-                        _context.Staffs.Update(staff);
                         await _context.SaveChangesAsync();
                     }
                 }
