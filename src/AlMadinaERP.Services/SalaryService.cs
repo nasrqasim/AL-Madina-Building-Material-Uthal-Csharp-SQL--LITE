@@ -89,7 +89,22 @@ namespace AlMadinaERP.Services
             if (staff.Id == 0)
                 await _context.Staffs.AddAsync(staff);
             else
+            {
                 _context.Staffs.Update(staff);
+
+                var existingSalaries = await _context.Salaries.Where(s => s.StaffId == staff.Id).ToListAsync();
+                foreach (var sal in existingSalaries)
+                {
+                    sal.StaffName = staff.FullName;
+                }
+
+                var existingAdvances = await _context.SalaryAdvances.Where(sa => sa.StaffId == staff.Id).ToListAsync();
+                foreach (var adv in existingAdvances)
+                {
+                    adv.StaffName = staff.FullName;
+                    adv.Department = staff.Department;
+                }
+            }
 
             await _context.SaveChangesAsync();
             return staff;
@@ -151,9 +166,9 @@ namespace AlMadinaERP.Services
                 var staff = await _context.Staffs.FindAsync(advance.StaffId.Value);
                 if (staff != null)
                 {
-                    staff.TotalAdvances = await _context.SalaryAdvances
+                    staff.TotalAdvances = (decimal)(await _context.SalaryAdvances
                         .Where(sa => sa.StaffId == staff.Id)
-                        .SumAsync(sa => (decimal?)sa.Amount) ?? 0m;
+                        .SumAsync(sa => (double?)sa.Amount) ?? 0);
                     advance.StaffName = staff.FullName;
                     advance.Department = staff.Department;
                     _context.Staffs.Update(staff);
@@ -178,9 +193,9 @@ namespace AlMadinaERP.Services
                     var staff = await _context.Staffs.FindAsync(staffId.Value);
                     if (staff != null)
                     {
-                        staff.TotalAdvances = await _context.SalaryAdvances
+                        staff.TotalAdvances = (decimal)(await _context.SalaryAdvances
                             .Where(sa => sa.StaffId == staff.Id)
-                            .SumAsync(sa => (decimal?)sa.Amount) ?? 0m;
+                            .SumAsync(sa => (double?)sa.Amount) ?? 0);
                         _context.Staffs.Update(staff);
                         await _context.SaveChangesAsync();
                     }
