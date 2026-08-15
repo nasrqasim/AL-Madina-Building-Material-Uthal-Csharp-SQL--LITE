@@ -188,8 +188,28 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task DeleteCustomerAsync(int customerId)
         {
-            await _customerService.DeleteCustomerAsync(customerId);
-            await LoadCustomersAsync();
+            var cust = Customers.FirstOrDefault(c => c.Id == customerId);
+            var name = cust != null ? cust.Name : "this customer";
+
+            var confirm = System.Windows.MessageBox.Show(
+                $"Are you sure you want to delete customer '{name}'?",
+                "Confirm Delete Customer",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+
+            if (confirm == System.Windows.MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await _customerService.DeleteCustomerAsync(customerId);
+                    await LoadCustomersAsync();
+                    System.Windows.MessageBox.Show($"Customer '{name}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Failed to delete customer: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
 
         [RelayCommand]
@@ -662,8 +682,28 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task DeleteVendorAsync(int vendorId)
         {
-            await _vendorService.DeleteVendorAsync(vendorId);
-            await LoadVendorsAsync();
+            var vend = Vendors.FirstOrDefault(v => v.Id == vendorId);
+            var name = vend != null ? vend.Name : "this vendor";
+
+            var confirm = System.Windows.MessageBox.Show(
+                $"Are you sure you want to delete vendor '{name}'?",
+                "Confirm Delete Vendor",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+
+            if (confirm == System.Windows.MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await _vendorService.DeleteVendorAsync(vendorId);
+                    await LoadVendorsAsync();
+                    System.Windows.MessageBox.Show($"Vendor '{name}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Failed to delete vendor: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
 
         [RelayCommand]

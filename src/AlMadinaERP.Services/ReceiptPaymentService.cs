@@ -310,21 +310,125 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteReceiptAsync(int id)
         {
-            var item = await _context.Receipts.FindAsync(id);
-            if (item != null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                _context.Receipts.Remove(item);
-                await _context.SaveChangesAsync();
+                var item = await _context.Receipts.FindAsync(id);
+                if (item != null)
+                {
+                    // Revert customer balance & ledger
+                    if (item.CustomerId.HasValue && item.CustomerId.Value > 0)
+                    {
+                        var customer = await _context.Customers.FindAsync(item.CustomerId.Value);
+                        if (customer != null)
+                        {
+                            if (item.IsAdvance)
+                            {
+                                if (customer.AdvanceAvailable >= item.Amount)
+                                    customer.AdvanceAvailable -= item.Amount;
+                                else
+                                {
+                                    var rem = item.Amount - customer.AdvanceAvailable;
+                                    customer.AdvanceAvailable = 0;
+                                    customer.OwesAmount += rem;
+                                }
+                            }
+                            else
+                            {
+                                customer.OwesAmount += item.Amount;
+                            }
+                            _context.Customers.Update(customer);
+                        }
+
+                        var ledgers = await _context.CustomerLedgers
+                            .Where(cl => cl.CustomerId == item.CustomerId.Value && (cl.VoucherNumber == item.ReceiptNumber || (cl.Remarks != null && cl.Remarks.Contains(item.ReceiptNumber))))
+                            .ToListAsync();
+                        if (ledgers.Any())
+                            _context.CustomerLedgers.RemoveRange(ledgers);
+                    }
+
+                    // Revert bank balance
+                    if (item.BankId.HasValue && item.BankId.Value > 0)
+                    {
+                        var bank = await _context.Banks.FindAsync(item.BankId.Value);
+                        if (bank != null)
+                        {
+                            bank.CurrentBalance -= item.Amount;
+                            _context.Banks.Update(bank);
+                        }
+                    }
+
+                    _context.Receipts.Remove(item);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
         public async Task DeletePaymentAsync(int id)
         {
-            var item = await _context.Payments.FindAsync(id);
-            if (item != null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                _context.Payments.Remove(item);
-                await _context.SaveChangesAsync();
+                var item = await _context.Payments.FindAsync(id);
+                if (item != null)
+                {
+                    // Revert vendor balance & ledger
+                    if (item.VendorId.HasValue && item.VendorId.Value > 0)
+                    {
+                        var vendor = await _context.Vendors.FindAsync(item.VendorId.Value);
+                        if (vendor != null)
+                        {
+                            if (item.IsAdvance)
+                            {
+                                if (vendor.AdvanceAvailable >= item.Amount)
+                                    vendor.AdvanceAvailable -= item.Amount;
+                                else
+                                {
+                                    var rem = item.Amount - vendor.AdvanceAvailable;
+                                    vendor.AdvanceAvailable = 0;
+                                    vendor.OwesAmount += rem;
+                                }
+                            }
+                            else
+                            {
+                                vendor.OwesAmount += item.Amount;
+                            }
+                            _context.Vendors.Update(vendor);
+                        }
+
+                        var ledgers = await _context.VendorLedgers
+                            .Where(vl => vl.VendorId == item.VendorId.Value && (vl.VoucherNumber == item.PaymentNumber || (vl.Remarks != null && vl.Remarks.Contains(item.PaymentNumber))))
+                            .ToListAsync();
+                        if (ledgers.Any())
+                            _context.VendorLedgers.RemoveRange(ledgers);
+                    }
+
+                    // Revert bank balance
+                    if (item.BankId.HasValue && item.BankId.Value > 0)
+                    {
+                        var bank = await _context.Banks.FindAsync(item.BankId.Value);
+                        if (bank != null)
+                        {
+                            bank.CurrentBalance += item.Amount;
+                            _context.Banks.Update(bank);
+                        }
+                    }
+
+                    _context.Payments.Remove(item);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
@@ -345,6 +449,16 @@ namespace AlMadinaERP.Services
             }
             await _context.SaveChangesAsync();
             return bank;
+        }
+
+        public async Task DeleteBankAsync(int id)
+        {
+            var bank = await _context.Banks.FindAsync(id);
+            if (bank != null)
+            {
+                bank.IsActive = false; // Soft delete
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task<List<Expense>> SearchExpensesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
@@ -449,6 +563,19 @@ namespace AlMadinaERP.Services
             var exp = await _context.Expenses.FindAsync(id);
             if (exp != null)
             {
+                bool isPaid = string.Equals(exp.Status, "Paid", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(exp.Status, "Posted", StringComparison.OrdinalIgnoreCase);
+
+                if (isPaid && exp.PaymentMethod == PaymentMethod.Bank && exp.BankId.HasValue && exp.BankId.Value > 0)
+                {
+                    var bank = await _context.Banks.FindAsync(exp.BankId.Value);
+                    if (bank != null)
+                    {
+                        bank.CurrentBalance += exp.Amount;
+                        _context.Banks.Update(bank);
+                    }
+                }
+
                 _context.Expenses.Remove(exp);
                 await _context.SaveChangesAsync();
             }

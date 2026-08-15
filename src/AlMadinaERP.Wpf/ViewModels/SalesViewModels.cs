@@ -505,8 +505,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (invoice != null)
             {
-                await _saleService.DeleteSaleInvoiceAsync(invoice.Id);
-                await LoadInvoicesAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete invoice #{invoice.InvoiceNumber} for PKR {invoice.NetAmount:N0}?\n\nThis will automatically reverse stock movements and customer balances.",
+                    "Confirm Delete Invoice",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _saleService.DeleteSaleInvoiceAsync(invoice.Id);
+                        await LoadInvoicesAsync();
+                        System.Windows.MessageBox.Show($"Invoice #{invoice.InvoiceNumber} deleted successfully and accounting/stock entries reversed.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete invoice: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 

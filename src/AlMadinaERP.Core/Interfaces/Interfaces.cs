@@ -93,6 +93,7 @@ namespace AlMadinaERP.Core.Interfaces
         Task DeletePaymentAsync(int id);
         Task<List<Bank>> GetBanksAsync();
         Task<Bank> SaveBankAsync(Bank bank);
+        Task DeleteBankAsync(int id);
         Task<List<Expense>> SearchExpensesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null);
         Task<List<Expense>> GetExpensesAsync();
         Task<Expense> SaveExpenseAsync(Expense expense);

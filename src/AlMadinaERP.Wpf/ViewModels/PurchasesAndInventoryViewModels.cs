@@ -428,8 +428,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (purchase != null)
             {
-                await _purchaseService.DeletePurchaseInvoiceAsync(purchase.Id);
-                await LoadPurchasesAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete purchase invoice #{purchase.PurchaseNumber} for PKR {purchase.NetAmount:N0}?\n\nThis will automatically reverse stock movements and vendor balances.",
+                    "Confirm Delete Purchase Invoice",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _purchaseService.DeletePurchaseInvoiceAsync(purchase.Id);
+                        await LoadPurchasesAsync();
+                        System.Windows.MessageBox.Show($"Purchase invoice #{purchase.PurchaseNumber} deleted successfully and accounting/stock entries reversed.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete purchase invoice: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 
@@ -928,8 +945,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (item != null)
             {
-                await _inventoryService.DeleteItemAsync(item.Id);
-                await LoadInventoryAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete item '{item.Name}' ({item.Code})?",
+                    "Confirm Delete Item",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _inventoryService.DeleteItemAsync(item.Id);
+                        await LoadInventoryAsync();
+                        System.Windows.MessageBox.Show($"Item '{item.Name}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete item: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 

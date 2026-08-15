@@ -577,8 +577,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (receipt != null)
             {
-                await _service.DeleteReceiptAsync(receipt.Id);
-                await LoadDataAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete receipt voucher '{receipt.ReceiptNumber}' for PKR {receipt.Amount:N0}?",
+                    "Confirm Delete Receipt",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _service.DeleteReceiptAsync(receipt.Id);
+                        await LoadDataAsync();
+                        System.Windows.MessageBox.Show($"Receipt '{receipt.ReceiptNumber}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete receipt: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 
@@ -587,8 +604,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (payment != null)
             {
-                await _service.DeletePaymentAsync(payment.Id);
-                await LoadDataAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete payment voucher '{payment.PaymentNumber}' for PKR {payment.Amount:N0}?",
+                    "Confirm Delete Payment",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _service.DeletePaymentAsync(payment.Id);
+                        await LoadDataAsync();
+                        System.Windows.MessageBox.Show($"Payment '{payment.PaymentNumber}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete payment: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 
@@ -1051,6 +1085,33 @@ namespace AlMadinaERP.Wpf.ViewModels
             await _service.SaveBankAsync(NewBank);
             IsAddBankModalOpen = false;
             await LoadDataAsync();
+        }
+
+        [RelayCommand]
+        public async Task DeleteBankAsync(Bank bank)
+        {
+            if (bank != null)
+            {
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete bank account '{bank.BankName}' ({bank.AccountNumber})?",
+                    "Confirm Delete Bank Account",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _service.DeleteBankAsync(bank.Id);
+                        await LoadDataAsync();
+                        System.Windows.MessageBox.Show($"Bank account '{bank.BankName}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete bank account: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
+            }
         }
 
         [RelayCommand]
