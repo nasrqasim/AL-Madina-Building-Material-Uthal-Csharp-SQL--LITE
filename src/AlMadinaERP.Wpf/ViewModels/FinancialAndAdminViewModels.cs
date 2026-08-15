@@ -197,11 +197,21 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _receiptSearchQuery = string.Empty;
 
+        partial void OnReceiptSearchQueryChanged(string value)
+        {
+            _ = LoadDataAsync();
+        }
+
         private readonly IPrintService _printService;
         private readonly IRepository<CompanySetting> _companyRepo;
 
         [ObservableProperty]
         private string _paymentSearchQuery = string.Empty;
+
+        partial void OnPaymentSearchQueryChanged(string value)
+        {
+            _ = LoadDataAsync();
+        }
 
         [ObservableProperty]
         private bool _isViewReceiptModalOpen;

@@ -269,15 +269,18 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Receipt>> SearchReceiptsAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
-            var q = _context.Receipts.Include(r => r.Customer).AsQueryable();
+            var q = _context.Receipts.Include(r => r.Customer).Include(r => r.Vendor).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
             {
-                query = query.ToLower();
-                q = q.Where(r => r.ReceiptNumber.ToLower().Contains(query) ||
-                                 r.CustomerName.ToLower().Contains(query) ||
-                                 r.IncomeTitle.ToLower().Contains(query) ||
-                                 r.Remarks.ToLower().Contains(query));
+                query = query.Trim().ToLower();
+                q = q.Where(r => (r.ReceiptNumber != null && r.ReceiptNumber.ToLower().Contains(query)) ||
+                                 (r.CustomerName != null && r.CustomerName.ToLower().Contains(query)) ||
+                                 (r.VendorName != null && r.VendorName.ToLower().Contains(query)) ||
+                                 (r.IncomeTitle != null && r.IncomeTitle.ToLower().Contains(query)) ||
+                                 (r.ReceivedBy != null && r.ReceivedBy.ToLower().Contains(query)) ||
+                                 (r.BankName != null && r.BankName.ToLower().Contains(query)) ||
+                                 (r.Remarks != null && r.Remarks.ToLower().Contains(query)));
             }
 
             if (fromDate.HasValue)
@@ -290,14 +293,17 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Payment>> SearchPaymentsAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
-            var q = _context.Payments.Include(p => p.Vendor).AsQueryable();
+            var q = _context.Payments.Include(p => p.Vendor).Include(p => p.Customer).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
             {
-                query = query.ToLower();
-                q = q.Where(p => p.PaymentNumber.ToLower().Contains(query) ||
-                                 p.VendorName.ToLower().Contains(query) ||
-                                 p.Remarks.ToLower().Contains(query));
+                query = query.Trim().ToLower();
+                q = q.Where(p => (p.PaymentNumber != null && p.PaymentNumber.ToLower().Contains(query)) ||
+                                 (p.VendorName != null && p.VendorName.ToLower().Contains(query)) ||
+                                 (p.CustomerName != null && p.CustomerName.ToLower().Contains(query)) ||
+                                 (p.PaidFrom != null && p.PaidFrom.ToLower().Contains(query)) ||
+                                 (p.BankName != null && p.BankName.ToLower().Contains(query)) ||
+                                 (p.Remarks != null && p.Remarks.ToLower().Contains(query)));
             }
 
             if (fromDate.HasValue)
