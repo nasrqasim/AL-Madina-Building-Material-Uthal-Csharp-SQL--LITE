@@ -453,7 +453,17 @@ namespace AlMadinaERP.Data
                 "ALTER TABLE Salaries ADD COLUMN StaffId INTEGER NULL;",
 
                 // SaleInvoiceItems
-                "ALTER TABLE SaleInvoiceItems ADD COLUMN IsReceived INTEGER NOT NULL DEFAULT 1;"
+                "ALTER TABLE SaleInvoiceItems ADD COLUMN IsReceived INTEGER NOT NULL DEFAULT 1;",
+                "ALTER TABLE SaleInvoiceItems ADD COLUMN LengthFeet REAL NOT NULL DEFAULT 0;",
+                "ALTER TABLE SaleInvoiceItems ADD COLUMN RatePerFoot REAL NOT NULL DEFAULT 0;",
+
+                // PurchaseInvoiceItems
+                "ALTER TABLE PurchaseInvoiceItems ADD COLUMN LengthFeet REAL NOT NULL DEFAULT 0;",
+                "ALTER TABLE PurchaseInvoiceItems ADD COLUMN RatePerFoot REAL NOT NULL DEFAULT 0;",
+
+                // Items
+                "ALTER TABLE Items ADD COLUMN LengthFeet REAL NOT NULL DEFAULT 0;",
+                "ALTER TABLE Items ADD COLUMN RatePerFoot REAL NOT NULL DEFAULT 0;"
             };
 
             foreach (var sql in migrationSql)

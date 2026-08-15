@@ -66,6 +66,19 @@ namespace AlMadinaERP.Core.Models
         public decimal WholesalePrice { get; set; }
         public decimal DealerPrice { get; set; }
         public decimal ContractPrice { get; set; }
+        public decimal LengthFeet { get; set; } = 0m;
+        public decimal RatePerFoot { get; set; } = 0m;
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public bool IsSpecialLengthItem
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Name)) return false;
+                var n = Name.Trim().ToUpper();
+                return n == "TEAR" || n == "GIRDER" || n.StartsWith("TEAR ") || n.StartsWith("GIRDER ");
+            }
+        }
         public double SalesTaxPercent { get; set; } = 0.0;
         public double DefaultDiscountPercent { get; set; } = 0.0;
         public string Status { get; set; } = "Active";

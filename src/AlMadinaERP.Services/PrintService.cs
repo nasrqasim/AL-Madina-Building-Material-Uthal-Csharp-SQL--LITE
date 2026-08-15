@@ -173,11 +173,18 @@ namespace AlMadinaERP.Services
                         totalQty += item.Quantity;
 
                         string unitStr = string.IsNullOrWhiteSpace(item.UnitName) ? "Pcs" : item.UnitName;
+                        string itemNameDisplay = item.ItemName ?? "";
+                        string rateDisplay = $"{item.Rate:N0}/{unitStr}";
+                        if (item.IsSpecialLengthItem && item.LengthFeet > 0)
+                        {
+                            itemNameDisplay += $" ({item.LengthFeet:0.##} ft)";
+                            rateDisplay = $"{item.RatePerFoot:N0}/ft";
+                        }
 
                         var row = new TableRow();
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(item.ItemName ?? "")) { FontSize = 10, FontWeight = FontWeights.Normal }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(itemNameDisplay)) { FontSize = 10, FontWeight = FontWeights.Normal }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run($"{item.Quantity:0.##}")) { FontSize = 10, TextAlignment = TextAlignment.Right }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run($"{item.Rate:N0}/{unitStr}")) { FontSize = 9, TextAlignment = TextAlignment.Right }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(rateDisplay)) { FontSize = 9, TextAlignment = TextAlignment.Right }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run($"{item.TotalPrice:N0}")) { FontSize = 10, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right }));
                         rowGroup.Rows.Add(row);
 
@@ -630,9 +637,18 @@ namespace AlMadinaERP.Services
                     foreach (var item in invoice.Items)
                     {
                         if (item == null) continue;
+
+                        string itemNameDisplay = item.ItemName ?? "";
+                        string rateDisplay = $"PKR {item.Rate:N0}";
+                        if (item.IsSpecialLengthItem && item.LengthFeet > 0)
+                        {
+                            itemNameDisplay += $" ({item.LengthFeet:0.##} ft @ PKR {item.RatePerFoot:N0}/ft)";
+                            rateDisplay = $"PKR {item.RatePerFoot:N0}/ft";
+                        }
+
                         var row = new TableRow();
                         row.Cells.Add(new TableCell(new Paragraph(new Run(idx.ToString())) { FontSize = 10, Margin = new Thickness(4, 5, 4, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(item.ItemName ?? "")) { FontSize = 10, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 5, 4, 5) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(itemNameDisplay)) { FontSize = 10, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 5, 4, 5) }));
 
                         var statusTxt = item.IsReceived ? "✓ RECEIVED" : "✗ NOT RECEIVED";
                         var statusClr = item.IsReceived ? System.Windows.Media.Brushes.DarkGreen : System.Windows.Media.Brushes.DarkRed;
@@ -641,7 +657,7 @@ namespace AlMadinaERP.Services
                         row.Cells.Add(new TableCell(new Paragraph(new Run($"{item.Quantity:0.##}")) { FontSize = 10, TextAlignment = TextAlignment.Center, Margin = new Thickness(4, 5, 4, 5) }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run($"{item.Quantity:0.##}")) { FontSize = 10, TextAlignment = TextAlignment.Center, Margin = new Thickness(4, 5, 4, 5) }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run("—")) { FontSize = 10, TextAlignment = TextAlignment.Center, Margin = new Thickness(4, 5, 4, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {item.Rate:N0}")) { FontSize = 10, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(rateDisplay)) { FontSize = 10, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
                         row.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {item.TotalPrice:N0}")) { FontSize = 10, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
                         rowGroup.Rows.Add(row);
                         idx++;

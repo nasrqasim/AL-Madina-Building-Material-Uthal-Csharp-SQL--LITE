@@ -477,6 +477,8 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" Margin="0,0,4,0">
@@ -485,16 +487,26 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                    <TextBlock Text="LENGTH (FEET)" Foreground="#1E3A8A" FontSize="10" FontWeight="Bold"/>
+                                    <TextBox Text="{Binding SelectedItem.LengthFeet}" FontWeight="Bold" Foreground="#1E3A8A" ToolTip="Default length in feet for TEAR / GIRDER items"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Margin="4,0,4,0">
+                                    <TextBlock Text="RATE PER FOOT" Foreground="#1E3A8A" FontSize="10" FontWeight="Bold"/>
+                                    <TextBox Text="{Binding SelectedItem.RatePerFoot}" FontWeight="Bold" Foreground="#1E3A8A" ToolTip="Default PKR rate per foot for TEAR / GIRDER items"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3" Margin="4,0,4,0">
                                     <TextBlock Text="SALES TAX (%)" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
                                     <TextBox Text="{Binding SelectedItem.SalesTaxPercent}"/>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="2" Margin="4,0,4,0">
+                                <StackPanel Grid.Column="4" Margin="4,0,4,0">
                                     <TextBlock Text="DEFAULT DISCOUNT (%)" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
                                     <TextBox Text="{Binding SelectedItem.DefaultDiscountPercent}"/>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="3" Margin="4,0,0,0">
+                                <StackPanel Grid.Column="5" Margin="4,0,0,0">
                                     <TextBlock Text="STATUS" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
                                     <ComboBox SelectedValue="{Binding SelectedItem.Status}" SelectedValuePath="Content" Height="34" Margin="0,4,0,10">
                                         <ComboBoxItem Content="Active"/>

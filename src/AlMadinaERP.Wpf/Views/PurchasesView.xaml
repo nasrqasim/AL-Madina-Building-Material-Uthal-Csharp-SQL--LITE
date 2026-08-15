@@ -640,7 +640,15 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Header="UNIT PRICE" Width="110">
+                                <DataGridTemplateColumn Header="LENGTH (FT)" Width="95">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding LengthFeet, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" FontSize="12" Foreground="#1E3A8A" FontWeight="Bold" VerticalContentAlignment="Center" ToolTip="Length in feet for TEAR / GIRDER items"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="UNIT PRICE / RATE" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding Rate, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" FontSize="12" Foreground="#0F172A" FontWeight="SemiBold" VerticalContentAlignment="Center"/>

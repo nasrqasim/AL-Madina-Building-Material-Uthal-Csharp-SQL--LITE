@@ -192,6 +192,8 @@ namespace AlMadinaERP.Core.Models
                                !string.IsNullOrWhiteSpace(value.SaleUnitName) ? value.SaleUnitName :
                                !string.IsNullOrWhiteSpace(value.SellingUnit) ? value.SellingUnit : "Pcs";
                     Rate = value.SalePrice;
+                    LengthFeet = value.LengthFeet;
+                    RatePerFoot = value.RatePerFoot > 0 ? value.RatePerFoot : value.SalePrice;
                     AvailableStock = value.CurrentStock;
                     ItemWarehouse = value.Warehouse;
                     ItemDescription = value.Description;
@@ -202,6 +204,8 @@ namespace AlMadinaERP.Core.Models
                 OnPropertyChanged(nameof(ItemName));
                 OnPropertyChanged(nameof(UnitName));
                 OnPropertyChanged(nameof(Rate));
+                OnPropertyChanged(nameof(LengthFeet));
+                OnPropertyChanged(nameof(RatePerFoot));
                 OnPropertyChanged(nameof(AvailableStock));
                 OnPropertyChanged(nameof(TotalPrice));
             }
@@ -226,6 +230,48 @@ namespace AlMadinaERP.Core.Models
         {
             get => _unitName;
             set { if (_unitName == value) return; _unitName = value; OnPropertyChanged(); }
+        }
+
+        private decimal _lengthFeet = 0m;
+        public decimal LengthFeet
+        {
+            get => _lengthFeet;
+            set
+            {
+                if (_lengthFeet == value) return;
+                _lengthFeet = value;
+                Recalculate();
+                OnPropertyChanged();
+            }
+        }
+
+        private decimal _ratePerFoot = 0m;
+        public decimal RatePerFoot
+        {
+            get => _ratePerFoot;
+            set
+            {
+                if (_ratePerFoot == value) return;
+                _ratePerFoot = value;
+                Recalculate();
+                OnPropertyChanged();
+            }
+        }
+
+        [NotMapped]
+        public bool IsSpecialLengthItem
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(ItemName))
+                {
+                    var n = ItemName.Trim().ToUpper();
+                    if (n == "TEAR" || n == "GIRDER" || n.StartsWith("TEAR ") || n.StartsWith("GIRDER "))
+                        return true;
+                }
+                if (Item != null && Item.IsSpecialLengthItem) return true;
+                return LengthFeet > 0 && RatePerFoot > 0;
+            }
         }
 
         [NotMapped]
@@ -256,6 +302,11 @@ namespace AlMadinaERP.Core.Models
             {
                 if (_rate == value) return;
                 _rate = value;
+                if (IsSpecialLengthItem && RatePerFoot != value)
+                {
+                    _ratePerFoot = value;
+                    OnPropertyChanged(nameof(RatePerFoot));
+                }
                 Recalculate();
                 OnPropertyChanged();
             }
@@ -304,7 +355,16 @@ namespace AlMadinaERP.Core.Models
 
         public void Recalculate()
         {
-            var gross = Quantity * Rate;
+            decimal gross;
+            if (IsSpecialLengthItem && LengthFeet > 0 && RatePerFoot > 0)
+            {
+                gross = Quantity * LengthFeet * RatePerFoot;
+            }
+            else
+            {
+                gross = Quantity * Rate;
+            }
+
             var disc = (gross * DiscountPercent) / 100m;
             var total = gross - disc;
 

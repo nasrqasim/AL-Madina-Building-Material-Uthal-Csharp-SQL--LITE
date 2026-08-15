@@ -376,6 +376,14 @@
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
 
+                                        <DataGridTemplateColumn Header="LENGTH (FT)" Width="95">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding LengthFeet, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" FontSize="12" Foreground="#1E3A8A" Padding="4,0" FontWeight="Bold" ToolTip="Length in feet for TEAR / GIRDER items"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
                                         <DataGridTemplateColumn Header="UNIT PRICE (PKR)" Width="120">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
