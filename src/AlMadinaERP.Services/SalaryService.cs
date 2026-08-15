@@ -100,6 +100,14 @@ namespace AlMadinaERP.Services
             var item = await _context.Staffs.FindAsync(id);
             if (item != null)
             {
+                var salaries = await _context.Salaries.Where(s => s.StaffId == id).ToListAsync();
+                if (salaries.Any())
+                    _context.Salaries.RemoveRange(salaries);
+
+                var advances = await _context.SalaryAdvances.Where(sa => sa.StaffId == id).ToListAsync();
+                if (advances.Any())
+                    _context.SalaryAdvances.RemoveRange(advances);
+
                 _context.Staffs.Remove(item);
                 await _context.SaveChangesAsync();
             }

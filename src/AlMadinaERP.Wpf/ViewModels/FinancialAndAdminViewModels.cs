@@ -1584,8 +1584,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (staff != null)
             {
-                await _service.DeleteStaffAsync(staff.Id);
-                await LoadSalariesAsync();
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete staff member '{staff.FullName}'?",
+                    "Confirm Delete Staff",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await _service.DeleteStaffAsync(staff.Id);
+                        await LoadSalariesAsync();
+                        System.Windows.MessageBox.Show($"Staff member '{staff.FullName}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"Failed to delete staff member: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
             }
         }
 
