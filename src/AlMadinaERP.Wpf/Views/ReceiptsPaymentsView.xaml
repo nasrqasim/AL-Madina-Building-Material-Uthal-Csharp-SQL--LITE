@@ -751,12 +751,12 @@
                                 <DataGridTextColumn Header="TYPE" Binding="{Binding IncomeType}" Width="100"/>
                                 <DataGridTextColumn Header="METHOD" Binding="{Binding PaymentMethod}" Width="100"/>
                                 <DataGridTextColumn Header="CHEQUE #" Binding="{Binding ChequeNo}" Width="110"/>
-                                <DataGridTemplateColumn Header="ACTIONS" Width="80">
+                                <DataGridTemplateColumn Header="ACTIONS" Width="100">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal">
-                                                <Button Content="👁️" Padding="2" Background="Transparent" Foreground="#2563EB" BorderThickness="0" Cursor="Hand"/>
-                                                <Button Command="{Binding DataContext.DeleteReceiptCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand"/>
+                                                <Button Command="{Binding DataContext.EditOtherIncomeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="✏️" Padding="2" Margin="0,0,4,0" Background="Transparent" Foreground="#D97706" BorderThickness="0" Cursor="Hand" ToolTip="Edit Other Income"/>
+                                                <Button Command="{Binding DataContext.DeleteReceiptCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Content="🗑️" Padding="2" Background="Transparent" Foreground="#DC2626" BorderThickness="0" Cursor="Hand" ToolTip="Delete Other Income"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -896,7 +896,7 @@
             <Border Background="#FFFFFF" CornerRadius="10" Width="520" VerticalAlignment="Center" Padding="24" BorderBrush="#CBD5E1" BorderThickness="1">
                 <StackPanel>
                     <Grid Margin="0,0,0,16">
-                        <TextBlock Text="Add Other Income" Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding OtherIncomeModalTitle}" Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
                         <Button Command="{Binding CloseAddOtherIncomeModalCommand}" Content="✕" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" Padding="4,0" Cursor="Hand"/>
                     </Grid>
 

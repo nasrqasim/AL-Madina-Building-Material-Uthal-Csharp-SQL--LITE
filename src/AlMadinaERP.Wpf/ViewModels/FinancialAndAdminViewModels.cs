@@ -175,6 +175,9 @@ namespace AlMadinaERP.Wpf.ViewModels
         private bool _isAddOtherIncomeModalOpen;
 
         [ObservableProperty]
+        private string _otherIncomeModalTitle = "Add Other Income";
+
+        [ObservableProperty]
         private string _expenseSearchQuery = string.Empty;
 
         partial void OnExpenseSearchQueryChanged(string value)
@@ -556,6 +559,31 @@ namespace AlMadinaERP.Wpf.ViewModels
         public void OpenAddOtherIncomeModal()
         {
             ResetNewOtherIncome();
+            OtherIncomeModalTitle = "Add Other Income";
+            IsAddOtherIncomeModalOpen = true;
+        }
+
+        [RelayCommand]
+        public void EditOtherIncome(Receipt income)
+        {
+            if (income == null) return;
+            OtherIncomeModalTitle = "Edit Other Income";
+            NewOtherIncome = new Receipt
+            {
+                Id = income.Id,
+                ReceiptNumber = income.ReceiptNumber,
+                Date = income.Date,
+                ReceiptType = ReceiptType.OtherIncome,
+                IncomeTitle = !string.IsNullOrWhiteSpace(income.IncomeTitle) ? income.IncomeTitle : income.CustomerName,
+                IncomeType = !string.IsNullOrWhiteSpace(income.IncomeType) ? income.IncomeType : "One Time",
+                Amount = income.Amount,
+                PaymentMethod = income.PaymentMethod,
+                BankId = income.BankId,
+                BankName = income.BankName,
+                ChequeNo = income.ChequeNo,
+                Remarks = income.Remarks,
+                Description = income.Remarks
+            };
             IsAddOtherIncomeModalOpen = true;
         }
 
@@ -575,7 +603,7 @@ namespace AlMadinaERP.Wpf.ViewModels
 
             NewOtherIncome.ReceiptType = ReceiptType.OtherIncome;
             NewOtherIncome.CustomerName = NewOtherIncome.IncomeTitle;
-            NewOtherIncome.Remarks = NewOtherIncome.Description;
+            NewOtherIncome.Remarks = !string.IsNullOrWhiteSpace(NewOtherIncome.Description) ? NewOtherIncome.Description : NewOtherIncome.Remarks;
 
             await _service.ProcessReceiptAsync(NewOtherIncome);
             IsAddOtherIncomeModalOpen = false;
