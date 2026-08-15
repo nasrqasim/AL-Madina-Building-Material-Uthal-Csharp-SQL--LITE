@@ -25,55 +25,99 @@ namespace AlMadinaERP.Services
                 var today = DateTime.Today;
                 var startOfMonth = new DateTime(today.Year, today.Month, 1);
 
-                // Customer Receivables
-                var custs = await _context.Customers.Where(c => c.IsActive).Select(c => c.OwesAmount).ToListAsync();
-                var customerReceivables = custs.Sum();
+                // Pure SQL Database Aggregations for 100,000+ Scalability (Zero RAM allocation)
+                var customerReceivables = (decimal)(await _context.Customers
+                    .Where(c => c.IsActive)
+                    .AsNoTracking()
+                    .SumAsync(c => (double?)c.OwesAmount) ?? 0);
 
-                // Vendor Payables
-                var vends = await _context.Vendors.Where(v => v.IsActive).Select(v => v.OwesAmount).ToListAsync();
-                var vendorPayables = vends.Sum();
+                var vendorPayables = (decimal)(await _context.Vendors
+                    .Where(v => v.IsActive)
+                    .AsNoTracking()
+                    .SumAsync(v => (double?)v.OwesAmount) ?? 0);
 
-                // Inventory Value
-                var itemValList = await _context.Items.Where(i => i.IsActive).Select(i => i.CurrentStock * i.PurchasePrice).ToListAsync();
-                var inventoryValue = itemValList.Sum();
+                var inventoryValue = (decimal)(await _context.Items
+                    .Where(i => i.IsActive)
+                    .AsNoTracking()
+                    .SumAsync(i => (double?)(double)(i.CurrentStock * i.PurchasePrice)) ?? 0);
 
-                // Cash & Bank Calculation
-                var salesList = await _context.SaleInvoices.Select(s => new { s.IsCashSale, s.Type, s.TotalAmount, s.Date }).ToListAsync();
-                var purchasesList = await _context.PurchaseInvoices.Select(p => new { p.IsCashPurchase, p.Type, p.TotalAmount, p.Date }).ToListAsync();
-                var receiptsList = await _context.Receipts.Select(r => new { r.PaymentMethod, r.Amount, r.Date }).ToListAsync();
-                var paymentsList = await _context.Payments.Select(p => new { p.Amount, p.Date }).ToListAsync();
-                var banksList = await _context.Banks.Where(b => b.IsActive).Select(b => b.CurrentBalance).ToListAsync();
-                var expensesList = await _context.Expenses.Select(e => new { e.Amount, e.Date }).ToListAsync();
+                var cashSales = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.IsCashSale && s.Type != InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
 
-                var cashSales = salesList.Where(s => s.IsCashSale && s.Type != InvoiceType.SaleReturn).Sum(s => s.TotalAmount);
-                var cashReceipts = receiptsList.Where(r => r.PaymentMethod == PaymentMethod.Cash || r.PaymentMethod == PaymentMethod.Bank).Sum(r => r.Amount);
-                var bankBalances = banksList.Sum();
+                var saleReturns = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.Type == InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
 
-                var cashPurchases = purchasesList.Where(p => p.IsCashPurchase && p.Type != PurchaseType.PurchaseReturn).Sum(p => p.TotalAmount);
-                var cashPayments = paymentsList.Sum(p => p.Amount);
-                var saleReturns = salesList.Where(s => s.Type == InvoiceType.SaleReturn).Sum(s => s.TotalAmount);
-                var expenses = expensesList.Sum(e => e.Amount);
+                var cashPurchases = (decimal)(await _context.PurchaseInvoices
+                    .Where(p => p.IsCashPurchase && p.Type != PurchaseType.PurchaseReturn)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.TotalAmount) ?? 0);
+
+                var cashReceipts = (decimal)(await _context.Receipts
+                    .Where(r => r.PaymentMethod == PaymentMethod.Cash || r.PaymentMethod == PaymentMethod.Bank)
+                    .AsNoTracking()
+                    .SumAsync(r => (double?)r.Amount) ?? 0);
+
+                var bankBalances = (decimal)(await _context.Banks
+                    .Where(b => b.IsActive)
+                    .AsNoTracking()
+                    .SumAsync(b => (double?)b.CurrentBalance) ?? 0);
+
+                var cashPayments = (decimal)(await _context.Payments
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.Amount) ?? 0);
+
+                var expenses = (decimal)(await _context.Expenses
+                    .AsNoTracking()
+                    .SumAsync(e => (double?)e.Amount) ?? 0);
 
                 var cashAndBanks = (cashSales + cashReceipts + bankBalances) - (cashPurchases + cashPayments + saleReturns + expenses);
 
-                // Sales Today & Today's Cash Movements
-                var salesToday = salesList.Where(s => s.Date >= today && s.Type != InvoiceType.SaleReturn).Sum(s => s.TotalAmount);
-                var cashReceivedToday = receiptsList.Where(r => r.Date >= today).Sum(r => r.Amount);
+                // Sales Today & Cash Movements Today
+                var salesToday = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.Date >= today && s.Type != InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
 
-                var purchasesToday = purchasesList.Where(p => p.Date >= today && p.Type != PurchaseType.PurchaseReturn).Sum(p => p.TotalAmount);
-                var cashPaidToday = paymentsList.Where(p => p.Date >= today).Sum(p => p.Amount);
+                var cashReceivedToday = (decimal)(await _context.Receipts
+                    .Where(r => r.Date >= today)
+                    .AsNoTracking()
+                    .SumAsync(r => (double?)r.Amount) ?? 0);
+
+                var purchasesToday = (decimal)(await _context.PurchaseInvoices
+                    .Where(p => p.Date >= today && p.Type != PurchaseType.PurchaseReturn)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.TotalAmount) ?? 0);
+
+                var cashPaidToday = (decimal)(await _context.Payments
+                    .Where(p => p.Date >= today)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.Amount) ?? 0);
 
                 // Monthly Sales & Purchases
-                var monthlySales = salesList.Where(s => s.Date >= startOfMonth && s.Type != InvoiceType.SaleReturn).Sum(s => s.TotalAmount);
-                var monthlyPurchases = purchasesList.Where(p => p.Date >= startOfMonth && p.Type != PurchaseType.PurchaseReturn).Sum(p => p.TotalAmount);
+                var monthlySales = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.Date >= startOfMonth && s.Type != InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
+
+                var monthlyPurchases = (decimal)(await _context.PurchaseInvoices
+                    .Where(p => p.Date >= startOfMonth && p.Type != PurchaseType.PurchaseReturn)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.TotalAmount) ?? 0);
 
                 // Monthly Net Profit
-                var monthlyCOGSList = await _context.SaleInvoiceItems
+                var monthlyCOGS = (decimal)(await _context.SaleInvoiceItems
                     .Where(si => si.SaleInvoice != null && si.SaleInvoice.Date >= startOfMonth && si.SaleInvoice.Type != InvoiceType.SaleReturn)
-                    .Select(si => si.Quantity * si.Rate)
-                    .ToListAsync();
-                var monthlyCOGS = monthlyCOGSList.Sum();
-                var monthlyExpenses = expensesList.Where(e => e.Date >= startOfMonth).Sum(e => e.Amount);
+                    .AsNoTracking()
+                    .SumAsync(si => (double?)(double)(si.Quantity * si.Rate)) ?? 0);
+
+                var monthlyExpenses = (decimal)(await _context.Expenses
+                    .Where(e => e.Date >= startOfMonth)
+                    .AsNoTracking()
+                    .SumAsync(e => (double?)e.Amount) ?? 0);
 
                 var netProfit = monthlySales - monthlyCOGS - monthlyExpenses;
 

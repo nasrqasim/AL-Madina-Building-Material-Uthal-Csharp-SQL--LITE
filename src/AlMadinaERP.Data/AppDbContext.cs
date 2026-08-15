@@ -99,9 +99,16 @@ namespace AlMadinaERP.Data
 
             modelBuilder.Entity<Receipt>()
                 .HasIndex(r => new { r.CustomerId, r.Date });
+            modelBuilder.Entity<Receipt>()
+                .HasIndex(r => new { r.PaymentMethod, r.Date });
 
             modelBuilder.Entity<Payment>()
                 .HasIndex(p => new { p.VendorId, p.Date });
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => new { p.PaymentMethod, p.Date });
+
+            modelBuilder.Entity<Expense>()
+                .HasIndex(e => new { e.Date, e.Category });
 
             modelBuilder.Entity<Salary>()
                 .HasIndex(s => new { s.StaffId, s.Date });

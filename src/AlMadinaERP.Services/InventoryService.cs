@@ -257,6 +257,10 @@ namespace AlMadinaERP.Services
             if (toDate.HasValue)
                 q = q.Where(l => l.Date <= toDate.Value);
 
+            // Default safety cap of 500 records to prevent memory freeze on 100,000+ movements
+            if (!fromDate.HasValue && !toDate.HasValue)
+                q = q.Take(500);
+
             return await q
                 .OrderByDescending(l => l.Date)
                 .ThenByDescending(l => l.Id)

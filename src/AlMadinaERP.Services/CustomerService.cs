@@ -21,22 +21,19 @@ namespace AlMadinaERP.Services
 
         public async Task<string> GetNextCustomerCodeAsync()
         {
-            var codes = await _context.Customers
+            var lastCode = await _context.Customers
+                .AsNoTracking()
+                .Where(c => c.Code.StartsWith("CUST-"))
+                .OrderByDescending(c => c.Code)
                 .Select(c => c.Code)
-                .ToListAsync();
+                .FirstOrDefaultAsync();
 
             int maxNum = 0;
-            foreach (var c in codes)
+            if (!string.IsNullOrEmpty(lastCode) && int.TryParse(lastCode.Substring(5), out int num))
             {
-                if (!string.IsNullOrWhiteSpace(c) && c.StartsWith("CUST-"))
-                {
-                    if (int.TryParse(c.Substring(5), out int num))
-                    {
-                        if (num > maxNum) maxNum = num;
-                    }
-                }
+                maxNum = num;
             }
-            if (maxNum == 0) maxNum = codes.Count;
+            if (maxNum == 0) maxNum = await _context.Customers.AsNoTracking().CountAsync();
             return $"CUST-{(maxNum + 1):D5}";
         }
 

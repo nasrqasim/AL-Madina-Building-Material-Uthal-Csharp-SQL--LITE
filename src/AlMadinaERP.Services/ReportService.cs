@@ -103,6 +103,7 @@ namespace AlMadinaERP.Services
                 .Include(si => si.SaleInvoice)
                 .Include(si => si.Item)
                 .Where(si => si.SaleInvoice != null && si.SaleInvoice.Date >= startDate && si.SaleInvoice.Date <= endDate)
+                .AsNoTracking()
                 .ToListAsync();
 
             var grouped = items.GroupBy(si => si.ItemId).Select(g =>
