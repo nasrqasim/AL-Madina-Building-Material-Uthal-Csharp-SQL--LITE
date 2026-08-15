@@ -97,7 +97,14 @@ namespace AlMadinaERP.Services
                     var count = await _context.Items.CountAsync();
                     item.Code = $"ITM-{(count + 1):D5}";
                 }
-                item.CurrentStock = item.OpeningStock;
+                if (item.OpeningStock == 0 && item.CurrentStock > 0)
+                {
+                    item.OpeningStock = item.CurrentStock;
+                }
+                else
+                {
+                    item.CurrentStock = item.OpeningStock;
+                }
                 item.CreatedDate = DateTime.Now;
                 item.LastUpdated = DateTime.Now;
                 await _context.Items.AddAsync(item);
