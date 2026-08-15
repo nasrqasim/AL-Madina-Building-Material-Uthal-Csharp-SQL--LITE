@@ -1203,168 +1203,95 @@ namespace AlMadinaERP.Services
                 var printDialog = new PrintDialog();
                 if (printDialog.ShowDialog() == true)
                 {
+                    double printableWidth = printDialog.PrintableAreaWidth > 0 ? printDialog.PrintableAreaWidth : 793;
+                    double printableHeight = printDialog.PrintableAreaHeight > 0 ? printDialog.PrintableAreaHeight : 1122;
+
                     var doc = new FlowDocument
                     {
-                        PageWidth = 793,
-                        PageHeight = 1122,
-                        PagePadding = new Thickness(36),
-                        FontFamily = new FontFamily("Segoe UI, Arial, sans-serif"),
+                        PageWidth = printableWidth,
+                        PageHeight = printableHeight,
+                        ColumnWidth = printableWidth, // CRITICAL FIX: Forces full A4 page width, prevents multi-column squeezing!
+                        PagePadding = new Thickness(40, 30, 40, 30),
+                        FontFamily = new FontFamily("Times New Roman, Arial, sans-serif"),
                         FontSize = 9.5
                     };
 
-                    // 1. TOP HEADER TABLE WITH LOGO, COMPANY DETAILS & STATEMENT BADGE
-                    var headerTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 16) };
-                    headerTable.Columns.Add(new TableColumn { Width = new GridLength(4.5, GridUnitType.Star) });
-                    headerTable.Columns.Add(new TableColumn { Width = new GridLength(3.0, GridUnitType.Star) });
+                    var entryList = (entries ?? System.Linq.Enumerable.Empty<CustomerLedger>()).ToList();
+                    var compName = string.IsNullOrWhiteSpace(company.CompanyName) ? "AL MADINA BUILDING MATERIAL ERP" : company.CompanyName.ToUpper();
 
-                    var headerGroup = new TableRowGroup();
-                    var headerRow = new TableRow();
+                    // 1. CENTERED EXECUTIVE HEADER (EXACTLY MATCHING IMAGE 2)
+                    var headerPara = new Paragraph { TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 0, 0, 16) };
+                    headerPara.Inlines.Add(new Run(compName + "\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
+                    headerPara.Inlines.Add(new Run($"CUSTOMER LEDGER STATEMENT - {customer.Name.ToUpper()} ({customer.Code})\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
 
-                    // Left Header: Logo + Company Info
-                    var leftCell = new TableCell();
-                    var logo = TryGetLogoImage(50);
-                    if (logo != null)
-                    {
-                        leftCell.Blocks.Add(new BlockUIContainer(logo));
-                    }
-                    var compName = string.IsNullOrWhiteSpace(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-                    var compAddress = !string.IsNullOrWhiteSpace(company.Address) ? company.Address : "Uthal, Balochistan";
-                    var compPhone = !string.IsNullOrWhiteSpace(company.Phone) ? company.Phone : "0322-2222222";
+                    string netBalStr = customer.CustomerOwes > 0 ? $"PKR -{customer.CustomerOwes:N2}" : $"PKR {customer.AdvanceAvailable:N2}";
+                    headerPara.Inlines.Add(new Run($"Phone: {customer.Phone ?? company.Phone ?? "N/A"}  |  Current Net Balance: {netBalStr}\n") { FontSize = 9.5, FontWeight = FontWeights.Bold });
+                    headerPara.Inlines.Add(new Run($"Statement Date: {DateTime.Now:dd/MM/yyyy HH:mm}  |  Total Entries: {entryList.Count}") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
 
-                    var compPara = new Paragraph();
-                    compPara.Inlines.Add(new Run(compName.ToUpper() + "\n") { FontSize = 15, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
-                    compPara.Inlines.Add(new Run($"Building Construction Material | Phone: {compPhone}\nAddress: {compAddress}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
-                    leftCell.Blocks.Add(compPara);
-                    headerRow.Cells.Add(leftCell);
+                    doc.Blocks.Add(headerPara);
 
-                    // Right Header: Statement Badge Box
-                    var rightCell = new TableCell { TextAlignment = TextAlignment.Right };
-                    var badgeBorder = new System.Windows.Controls.Border
-                    {
-                        Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)),
-                        BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12, 8, 12, 8)
-                    };
-                    var badgePanel = new System.Windows.Controls.StackPanel();
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = "CUSTOMER STATEMENT / LEDGER", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Statement Date: {DateTime.Now:dd-MMM-yyyy HH:mm}", FontSize = 9.5, Foreground = System.Windows.Media.Brushes.DarkSlateGray, Margin = new Thickness(0, 2, 0, 0) });
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Status: {customer.StatusText}", FontSize = 9.5, FontWeight = FontWeights.Bold, Foreground = customer.CustomerOwes > 0 ? System.Windows.Media.Brushes.DarkRed : System.Windows.Media.Brushes.DarkGreen, Margin = new Thickness(0, 2, 0, 0) });
-                    badgeBorder.Child = badgePanel;
-
-                    rightCell.Blocks.Add(new BlockUIContainer(badgeBorder));
-                    headerRow.Cells.Add(rightCell);
-
-                    headerGroup.Rows.Add(headerRow);
-                    headerTable.RowGroups.Add(headerGroup);
-                    doc.Blocks.Add(headerTable);
-
-                    // 2. PARTY INFO & SUMMARY BANNER
-                    var infoTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 16) };
-                    infoTable.Columns.Add(new TableColumn { Width = new GridLength(4.2, GridUnitType.Star) });
-                    infoTable.Columns.Add(new TableColumn { Width = new GridLength(3.3, GridUnitType.Star) });
-
-                    var infoGroup = new TableRowGroup();
-                    var infoRow = new TableRow();
-
-                    var partyCell = new TableCell();
-                    var partyBorder = new System.Windows.Controls.Border
-                    {
-                        Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249)),
-                        BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12)
-                    };
-                    var partySp = new System.Windows.Controls.StackPanel();
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = "ACCOUNT DETAILS", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Gray });
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = customer.Name, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)), Margin = new Thickness(0, 2, 0, 0) });
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Account Code: {customer.Code} | Phone: {customer.Phone}", FontSize = 9.5, Foreground = System.Windows.Media.Brushes.DarkSlateGray, Margin = new Thickness(0, 2, 0, 0) });
-                    partyBorder.Child = partySp;
-                    partyCell.Blocks.Add(new BlockUIContainer(partyBorder));
-                    infoRow.Cells.Add(partyCell);
-
-                    var balCell = new TableCell();
-                    var balBorder = new System.Windows.Controls.Border
-                    {
-                        Background = customer.CustomerOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(254, 242, 242)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 253, 244)),
-                        BorderBrush = customer.CustomerOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(254, 202, 202)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(187, 247, 208)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12)
-                    };
-                    var balSp = new System.Windows.Controls.StackPanel();
-                    balSp.Children.Add(new System.Windows.Controls.TextBlock { Text = "CURRENT BALANCE POSITION", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Gray });
-                    string netVal = customer.CustomerOwes > 0 ? $"PKR {customer.CustomerOwes:N0} (Receivable)" : $"PKR {customer.AdvanceAvailable:N0} (Advance)";
-                    balSp.Children.Add(new System.Windows.Controls.TextBlock { Text = netVal, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = customer.CustomerOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), Margin = new Thickness(0, 2, 0, 0) });
-                    balBorder.Child = balSp;
-                    balCell.Blocks.Add(new BlockUIContainer(balBorder));
-                    infoRow.Cells.Add(balCell);
-
-                    infoGroup.Rows.Add(infoRow);
-                    infoTable.RowGroups.Add(infoGroup);
-                    doc.Blocks.Add(infoTable);
-
-                    // 3. FULL-WIDTH TRANSACTION LEDGER TABLE WITH STAR COLUMNS
-                    var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0, 1, 0, 1), BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 0, 0, 14) };
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.4, GridUnitType.Star) }); // DATE
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // TYPE
+                    // 2. LEDGER TABLE WITH 7 FULL-WIDTH STAR COLUMNS (EXACT MATCHING IMAGE 2)
+                    var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0, 1, 0, 1), BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)), Margin = new Thickness(0, 0, 0, 14) };
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // DATE
                     table.Columns.Add(new TableColumn { Width = new GridLength(1.3, GridUnitType.Star) }); // VOUCHER #
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.2, GridUnitType.Star) }); // DEBIT (+)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.2, GridUnitType.Star) }); // CREDIT (-)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.3, GridUnitType.Star) }); // BALANCE
-                    table.Columns.Add(new TableColumn { Width = new GridLength(2.5, GridUnitType.Star) }); // DETAILS / REMARKS
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // TYPE
+                    table.Columns.Add(new TableColumn { Width = new GridLength(2.5, GridUnitType.Star) }); // DESCRIPTION
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.0, GridUnitType.Star) }); // DEBIT (PKR)
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.0, GridUnitType.Star) }); // CREDIT (PKR)
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // BALANCE (PKR)
 
                     var rowGroup = new TableRowGroup();
-                    var headerRowTable = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) };
+                    var headerRowTable = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) };
 
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DATE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("TYPE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("VOUCHER #")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DEBIT (+)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("CREDIT (-)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("BALANCE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DETAILS / REMARKS")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DATE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("VOUCHER #")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("TYPE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DESCRIPTION")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DEBIT (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("CREDIT (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("BALANCE (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
                     rowGroup.Rows.Add(headerRowTable);
 
                     decimal totDebit = 0m, totCredit = 0m;
                     int rIdx = 0;
-                    foreach (var e in entries ?? System.Linq.Enumerable.Empty<CustomerLedger>())
+                    foreach (var e in entryList)
                     {
                         totDebit += e.Debit;
                         totCredit += e.Credit;
 
-                        var bgBrush = rIdx % 2 == 0 ? System.Windows.Media.Brushes.White : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                        var bgBrush = rIdx % 2 == 0 ? System.Windows.Media.Brushes.White : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 250, 251));
                         var row = new TableRow { Background = bgBrush };
 
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Date.ToString("yyyy-MM-dd HH:mm"))) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.TransactionType ?? "")) { FontSize = 9, FontWeight = FontWeights.SemiBold, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.VoucherNumber ?? "")) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Debit > 0 ? $"PKR {e.Debit:N0}" : "-")) { FontSize = 9, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Credit > 0 ? $"PKR {e.Credit:N0}" : "-")) { FontSize = 9, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {e.RunningBalance:N0}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Date.ToString("dd/MM/yyyy"))) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.VoucherNumber ?? "")) { FontSize = 8.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.TransactionType ?? "")) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
 
-                        string summaryText = !string.IsNullOrWhiteSpace(e.ItemDetailsSummary) ? e.ItemDetailsSummary : (e.Remarks ?? "");
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(summaryText)) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
+                        string desc = !string.IsNullOrWhiteSpace(e.Remarks) ? e.Remarks : (!string.IsNullOrWhiteSpace(e.ItemDetailsSummary) ? e.ItemDetailsSummary : "");
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(desc)) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
+
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Debit > 0 ? e.Debit.ToString("N2") : "-")) { FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Credit > 0 ? e.Credit.ToString("N2") : "-")) { FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
+
+                        string balDisplay = e.RunningBalance < 0 ? $"-{Math.Abs(e.RunningBalance):N2}" : e.RunningBalance.ToString("N2");
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(balDisplay)) { FontSize = 8.5, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
                         rowGroup.Rows.Add(row);
 
                         if (e.SaleInvoice?.Items != null && e.SaleInvoice.Items.Count > 0)
                         {
                             foreach (var item in e.SaleInvoice.Items)
                             {
-                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249)) };
-                                string itemDesc = $"└─ {item.ItemName} | Qty: {item.Quantity} {item.UnitName} @ PKR {item.Rate:N2} = PKR {item.TotalPrice:N0}";
+                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 247, 255)) };
+                                string itemDesc = $"└─ Item: {item.ItemName} | Qty: {item.Quantity:0.#} {item.UnitName} | Price/Unit: Rs.{item.Rate:N2} | Amount: Rs.{item.TotalPrice:N2}";
                                 if (item.IsSpecialLengthItem && item.LengthFeet > 0)
                                 {
-                                    itemDesc = $"└─ {item.ItemName} | Qty: {item.Quantity} pcs ({item.LengthFeet} ft) @ PKR {item.RatePerFoot:N0}/ft = PKR {item.TotalPrice:N0}";
+                                    itemDesc = $"└─ Item: {item.ItemName} | Qty: {item.Quantity:0.#} pcs ({item.LengthFeet:0.##} ft) | Price/Unit: Rs.{item.RatePerFoot:N2}/ft | Amount: Rs.{item.TotalPrice:N2}";
                                 }
                                 var itemCell = new TableCell(new Paragraph(new Run(itemDesc))
                                 {
-                                    FontSize = 8.5,
-                                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105)),
+                                    FontSize = 8,
+                                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(37, 99, 235)),
                                     FontStyle = FontStyles.Italic,
-                                    Margin = new Thickness(15, 3, 5, 3)
+                                    Margin = new Thickness(15, 2, 4, 2)
                                 })
                                 {
                                     ColumnSpan = 7
@@ -1376,29 +1303,19 @@ namespace AlMadinaERP.Services
                         rIdx++;
                     }
 
-                    // TOTALS ROW
+                    // TOTALS ROW (EXACT MATCHING IMAGE 2)
                     var totalRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240)) };
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL / SUMMARY")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Margin = new Thickness(5, 7, 5, 7) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL")) { FontWeight = FontWeights.Bold, FontSize = 9, Margin = new Thickness(4, 6, 4, 6) }));
                     totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
                     totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {totDebit:N0}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {totCredit:N0}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"Net: PKR {(customer.CustomerOwes > 0 ? customer.CustomerOwes.ToString("N0") : customer.AdvanceAvailable.ToString("N0"))}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(customer.StatusText)) { FontWeight = FontWeights.Bold, FontSize = 9.5, Margin = new Thickness(5, 7, 5, 7) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totDebit.ToString("N2"))) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totCredit.ToString("N2"))) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(netBalStr)) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
                     rowGroup.Rows.Add(totalRow);
 
                     table.RowGroups.Add(rowGroup);
                     doc.Blocks.Add(table);
-
-                    // FOOTER BRANDING STATEMENT
-                    var footerPara = new Paragraph(new Run($"Official Document generated by AL MADINA BUILDING MATERIAL ERP | Page 1 of 1 | Date: {DateTime.Now:yyyy-MM-dd HH:mm}"))
-                    {
-                        FontSize = 8.5,
-                        Foreground = System.Windows.Media.Brushes.Gray,
-                        TextAlignment = TextAlignment.Center,
-                        Margin = new Thickness(0, 15, 0, 0)
-                    };
-                    doc.Blocks.Add(footerPara);
 
                     var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
                     printDialog.PrintDocument(paginator, $"Customer Ledger {customer.Name}");
@@ -1416,168 +1333,95 @@ namespace AlMadinaERP.Services
                 var printDialog = new PrintDialog();
                 if (printDialog.ShowDialog() == true)
                 {
+                    double printableWidth = printDialog.PrintableAreaWidth > 0 ? printDialog.PrintableAreaWidth : 793;
+                    double printableHeight = printDialog.PrintableAreaHeight > 0 ? printDialog.PrintableAreaHeight : 1122;
+
                     var doc = new FlowDocument
                     {
-                        PageWidth = 793,
-                        PageHeight = 1122,
-                        PagePadding = new Thickness(36),
-                        FontFamily = new FontFamily("Segoe UI, Arial, sans-serif"),
+                        PageWidth = printableWidth,
+                        PageHeight = printableHeight,
+                        ColumnWidth = printableWidth, // CRITICAL FIX: Forces full A4 page width, prevents multi-column squeezing!
+                        PagePadding = new Thickness(40, 30, 40, 30),
+                        FontFamily = new FontFamily("Times New Roman, Arial, sans-serif"),
                         FontSize = 9.5
                     };
 
-                    // 1. TOP HEADER TABLE WITH LOGO, COMPANY DETAILS & STATEMENT BADGE
-                    var headerTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 16) };
-                    headerTable.Columns.Add(new TableColumn { Width = new GridLength(4.5, GridUnitType.Star) });
-                    headerTable.Columns.Add(new TableColumn { Width = new GridLength(3.0, GridUnitType.Star) });
+                    var entryList = (entries ?? System.Linq.Enumerable.Empty<VendorLedger>()).ToList();
+                    var compName = string.IsNullOrWhiteSpace(company.CompanyName) ? "AL MADINA BUILDING MATERIAL ERP" : company.CompanyName.ToUpper();
 
-                    var headerGroup = new TableRowGroup();
-                    var headerRow = new TableRow();
+                    // 1. CENTERED EXECUTIVE HEADER (EXACTLY MATCHING IMAGE 2)
+                    var headerPara = new Paragraph { TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 0, 0, 16) };
+                    headerPara.Inlines.Add(new Run(compName + "\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
+                    headerPara.Inlines.Add(new Run($"VENDOR LEDGER STATEMENT - {vendor.Name.ToUpper()} ({vendor.Code})\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
 
-                    // Left Header: Logo + Company Info
-                    var leftCell = new TableCell();
-                    var logo = TryGetLogoImage(50);
-                    if (logo != null)
-                    {
-                        leftCell.Blocks.Add(new BlockUIContainer(logo));
-                    }
-                    var compName = string.IsNullOrWhiteSpace(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-                    var compAddress = !string.IsNullOrWhiteSpace(company.Address) ? company.Address : "Uthal, Balochistan";
-                    var compPhone = !string.IsNullOrWhiteSpace(company.Phone) ? company.Phone : "0322-2222222";
+                    string netBalStr = vendor.VendorOwes > 0 ? $"PKR {vendor.VendorOwes:N2}" : $"PKR -{vendor.AdvanceAvailable:N2}";
+                    headerPara.Inlines.Add(new Run($"Phone: {vendor.Phone ?? company.Phone ?? "N/A"}  |  Current Net Balance: {netBalStr}\n") { FontSize = 9.5, FontWeight = FontWeights.Bold });
+                    headerPara.Inlines.Add(new Run($"Statement Date: {DateTime.Now:dd/MM/yyyy HH:mm}  |  Total Entries: {entryList.Count}") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
 
-                    var compPara = new Paragraph();
-                    compPara.Inlines.Add(new Run(compName.ToUpper() + "\n") { FontSize = 15, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
-                    compPara.Inlines.Add(new Run($"Building Construction Material | Phone: {compPhone}\nAddress: {compAddress}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
-                    leftCell.Blocks.Add(compPara);
-                    headerRow.Cells.Add(leftCell);
+                    doc.Blocks.Add(headerPara);
 
-                    // Right Header: Statement Badge Box
-                    var rightCell = new TableCell { TextAlignment = TextAlignment.Right };
-                    var badgeBorder = new System.Windows.Controls.Border
-                    {
-                        Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)),
-                        BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12, 8, 12, 8)
-                    };
-                    var badgePanel = new System.Windows.Controls.StackPanel();
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = "VENDOR STATEMENT / LEDGER", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Statement Date: {DateTime.Now:dd-MMM-yyyy HH:mm}", FontSize = 9.5, Foreground = System.Windows.Media.Brushes.DarkSlateGray, Margin = new Thickness(0, 2, 0, 0) });
-                    badgePanel.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Status: {vendor.StatusText}", FontSize = 9.5, FontWeight = FontWeights.Bold, Foreground = vendor.VendorOwes > 0 ? System.Windows.Media.Brushes.DarkRed : System.Windows.Media.Brushes.DarkGreen, Margin = new Thickness(0, 2, 0, 0) });
-                    badgeBorder.Child = badgePanel;
-
-                    rightCell.Blocks.Add(new BlockUIContainer(badgeBorder));
-                    headerRow.Cells.Add(rightCell);
-
-                    headerGroup.Rows.Add(headerRow);
-                    headerTable.RowGroups.Add(headerGroup);
-                    doc.Blocks.Add(headerTable);
-
-                    // 2. VENDOR INFO & SUMMARY BANNER
-                    var infoTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 16) };
-                    infoTable.Columns.Add(new TableColumn { Width = new GridLength(4.2, GridUnitType.Star) });
-                    infoTable.Columns.Add(new TableColumn { Width = new GridLength(3.3, GridUnitType.Star) });
-
-                    var infoGroup = new TableRowGroup();
-                    var infoRow = new TableRow();
-
-                    var partyCell = new TableCell();
-                    var partyBorder = new System.Windows.Controls.Border
-                    {
-                        Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249)),
-                        BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12)
-                    };
-                    var partySp = new System.Windows.Controls.StackPanel();
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = "VENDOR ACCOUNT DETAILS", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Gray });
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = vendor.Name, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)), Margin = new Thickness(0, 2, 0, 0) });
-                    partySp.Children.Add(new System.Windows.Controls.TextBlock { Text = $"Vendor Code: {vendor.Code} | Phone: {vendor.Phone}", FontSize = 9.5, Foreground = System.Windows.Media.Brushes.DarkSlateGray, Margin = new Thickness(0, 2, 0, 0) });
-                    partyBorder.Child = partySp;
-                    partyCell.Blocks.Add(new BlockUIContainer(partyBorder));
-                    infoRow.Cells.Add(partyCell);
-
-                    var balCell = new TableCell();
-                    var balBorder = new System.Windows.Controls.Border
-                    {
-                        Background = vendor.VendorOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(254, 242, 242)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 253, 244)),
-                        BorderBrush = vendor.VendorOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(254, 202, 202)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(187, 247, 208)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(6),
-                        Padding = new Thickness(12)
-                    };
-                    var balSp = new System.Windows.Controls.StackPanel();
-                    balSp.Children.Add(new System.Windows.Controls.TextBlock { Text = "CURRENT PAYABLE POSITION", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Gray });
-                    string netVal = vendor.VendorOwes > 0 ? $"PKR {vendor.VendorOwes:N0} (Payable)" : $"PKR {vendor.AdvanceAvailable:N0} (Advance)";
-                    balSp.Children.Add(new System.Windows.Controls.TextBlock { Text = netVal, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = vendor.VendorOwes > 0 ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)) : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), Margin = new Thickness(0, 2, 0, 0) });
-                    balBorder.Child = balSp;
-                    balCell.Blocks.Add(new BlockUIContainer(balBorder));
-                    infoRow.Cells.Add(balCell);
-
-                    infoGroup.Rows.Add(infoRow);
-                    infoTable.RowGroups.Add(infoGroup);
-                    doc.Blocks.Add(infoTable);
-
-                    // 3. FULL-WIDTH TRANSACTION LEDGER TABLE WITH STAR COLUMNS
-                    var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0, 1, 0, 1), BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184)), Margin = new Thickness(0, 0, 0, 14) };
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.4, GridUnitType.Star) }); // DATE
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // TYPE
+                    // 2. LEDGER TABLE WITH 7 FULL-WIDTH STAR COLUMNS (EXACT MATCHING IMAGE 2)
+                    var table = new Table { CellSpacing = 0, BorderThickness = new Thickness(0, 1, 0, 1), BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)), Margin = new Thickness(0, 0, 0, 14) };
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // DATE
                     table.Columns.Add(new TableColumn { Width = new GridLength(1.3, GridUnitType.Star) }); // VOUCHER #
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.2, GridUnitType.Star) }); // DEBIT (-)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.2, GridUnitType.Star) }); // CREDIT (+)
-                    table.Columns.Add(new TableColumn { Width = new GridLength(1.3, GridUnitType.Star) }); // BALANCE
-                    table.Columns.Add(new TableColumn { Width = new GridLength(2.5, GridUnitType.Star) }); // DETAILS / REMARKS
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // TYPE
+                    table.Columns.Add(new TableColumn { Width = new GridLength(2.5, GridUnitType.Star) }); // DESCRIPTION
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.0, GridUnitType.Star) }); // DEBIT (PKR)
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.0, GridUnitType.Star) }); // CREDIT (PKR)
+                    table.Columns.Add(new TableColumn { Width = new GridLength(1.1, GridUnitType.Star) }); // BALANCE (PKR)
 
                     var rowGroup = new TableRowGroup();
-                    var headerRowTable = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) };
+                    var headerRowTable = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) };
 
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DATE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("TYPE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("VOUCHER #")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DEBIT (-)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("CREDIT (+)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("BALANCE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 6, 5, 6) }));
-                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DETAILS / REMARKS")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 9, Margin = new Thickness(5, 6, 5, 6) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DATE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("VOUCHER #")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("TYPE")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DESCRIPTION")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("DEBIT (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("CREDIT (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
+                    headerRowTable.Cells.Add(new TableCell(new Paragraph(new Run("BALANCE (PKR)")) { FontWeight = FontWeights.Bold, Foreground = System.Windows.Media.Brushes.White, FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 5, 4, 5) }));
                     rowGroup.Rows.Add(headerRowTable);
 
                     decimal totDebit = 0m, totCredit = 0m;
                     int rIdx = 0;
-                    foreach (var e in entries ?? System.Linq.Enumerable.Empty<VendorLedger>())
+                    foreach (var e in entryList)
                     {
                         totDebit += e.Debit;
                         totCredit += e.Credit;
 
-                        var bgBrush = rIdx % 2 == 0 ? System.Windows.Media.Brushes.White : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                        var bgBrush = rIdx % 2 == 0 ? System.Windows.Media.Brushes.White : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 250, 251));
                         var row = new TableRow { Background = bgBrush };
 
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Date.ToString("yyyy-MM-dd HH:mm"))) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.TransactionType ?? "")) { FontSize = 9, FontWeight = FontWeights.SemiBold, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.VoucherNumber ?? "")) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Debit > 0 ? $"PKR {e.Debit:N0}" : "-")) { FontSize = 9, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Credit > 0 ? $"PKR {e.Credit:N0}" : "-")) { FontSize = 9, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
-                        row.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {e.RunningBalance:N0}")) { FontSize = 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 5, 5, 5) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Date.ToString("dd/MM/yyyy"))) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.VoucherNumber ?? "")) { FontSize = 8.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.TransactionType ?? "")) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
 
-                        string summaryText = !string.IsNullOrWhiteSpace(e.ItemDetailsSummary) ? e.ItemDetailsSummary : (e.Remarks ?? "");
-                        row.Cells.Add(new TableCell(new Paragraph(new Run(summaryText)) { FontSize = 9, Margin = new Thickness(5, 5, 5, 5) }));
+                        string desc = !string.IsNullOrWhiteSpace(e.Remarks) ? e.Remarks : (!string.IsNullOrWhiteSpace(e.ItemDetailsSummary) ? e.ItemDetailsSummary : "");
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(desc)) { FontSize = 8.5, Margin = new Thickness(4, 4, 4, 4) }));
+
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Debit > 0 ? e.Debit.ToString("N2") : "-")) { FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(e.Credit > 0 ? e.Credit.ToString("N2") : "-")) { FontSize = 8.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
+
+                        string balDisplay = e.RunningBalance < 0 ? $"-{Math.Abs(e.RunningBalance):N2}" : e.RunningBalance.ToString("N2");
+                        row.Cells.Add(new TableCell(new Paragraph(new Run(balDisplay)) { FontSize = 8.5, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 4, 4, 4) }));
                         rowGroup.Rows.Add(row);
 
                         if (e.PurchaseInvoice?.Items != null && e.PurchaseInvoice.Items.Count > 0)
                         {
                             foreach (var item in e.PurchaseInvoice.Items)
                             {
-                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249)) };
-                                string itemDesc = $"└─ {item.ItemName} | Qty: {item.Quantity} {item.UnitName} @ PKR {item.Rate:N2} = PKR {item.TotalPrice:N0}";
+                                var itemRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 247, 255)) };
+                                string itemDesc = $"└─ Item: {item.ItemName} | Qty: {item.Quantity:0.#} {item.UnitName} | Price/Unit: Rs.{item.Rate:N2} | Amount: Rs.{item.TotalPrice:N2}";
                                 if (item.IsSpecialLengthItem && item.LengthFeet > 0)
                                 {
-                                    itemDesc = $"└─ {item.ItemName} | Qty: {item.Quantity} pcs ({item.LengthFeet} ft) @ PKR {item.RatePerFoot:N0}/ft = PKR {item.TotalPrice:N0}";
+                                    itemDesc = $"└─ Item: {item.ItemName} | Qty: {item.Quantity:0.#} pcs ({item.LengthFeet:0.##} ft) | Price/Unit: Rs.{item.RatePerFoot:N2}/ft | Amount: Rs.{item.TotalPrice:N2}";
                                 }
                                 var itemCell = new TableCell(new Paragraph(new Run(itemDesc))
                                 {
-                                    FontSize = 8.5,
-                                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105)),
+                                    FontSize = 8,
+                                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(37, 99, 235)),
                                     FontStyle = FontStyles.Italic,
-                                    Margin = new Thickness(15, 3, 5, 3)
+                                    Margin = new Thickness(15, 2, 4, 2)
                                 })
                                 {
                                     ColumnSpan = 7
@@ -1589,29 +1433,19 @@ namespace AlMadinaERP.Services
                         rIdx++;
                     }
 
-                    // TOTALS ROW
+                    // TOTALS ROW (EXACT MATCHING IMAGE 2)
                     var totalRow = new TableRow { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240)) };
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL / SUMMARY")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Margin = new Thickness(5, 7, 5, 7) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run("TOTAL")) { FontWeight = FontWeights.Bold, FontSize = 9, Margin = new Thickness(4, 6, 4, 6) }));
                     totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
                     totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {totDebit:N0}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 163, 74)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"PKR {totCredit:N0}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)), TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run($"Net: PKR {(vendor.VendorOwes > 0 ? vendor.VendorOwes.ToString("N0") : vendor.AdvanceAvailable.ToString("N0"))}")) { FontWeight = FontWeights.Bold, FontSize = 9.5, TextAlignment = TextAlignment.Right, Margin = new Thickness(5, 7, 5, 7) }));
-                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(vendor.StatusText)) { FontWeight = FontWeights.Bold, FontSize = 9.5, Margin = new Thickness(5, 7, 5, 7) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(""))));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totDebit.ToString("N2"))) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(totCredit.ToString("N2"))) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
+                    totalRow.Cells.Add(new TableCell(new Paragraph(new Run(netBalStr)) { FontWeight = FontWeights.Bold, FontSize = 9, TextAlignment = TextAlignment.Right, Margin = new Thickness(4, 6, 4, 6) }));
                     rowGroup.Rows.Add(totalRow);
 
                     table.RowGroups.Add(rowGroup);
                     doc.Blocks.Add(table);
-
-                    // FOOTER BRANDING STATEMENT
-                    var footerPara = new Paragraph(new Run($"Official Document generated by AL MADINA BUILDING MATERIAL ERP | Page 1 of 1 | Date: {DateTime.Now:yyyy-MM-dd HH:mm}"))
-                    {
-                        FontSize = 8.5,
-                        Foreground = System.Windows.Media.Brushes.Gray,
-                        TextAlignment = TextAlignment.Center,
-                        Margin = new Thickness(0, 15, 0, 0)
-                    };
-                    doc.Blocks.Add(footerPara);
 
                     var paginator = ((IDocumentPaginatorSource)doc).DocumentPaginator;
                     printDialog.PrintDocument(paginator, $"Vendor Ledger {vendor.Name}");
