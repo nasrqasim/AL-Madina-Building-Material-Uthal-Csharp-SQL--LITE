@@ -1790,6 +1790,25 @@ namespace AlMadinaERP.Wpf.ViewModels
         private string _inventorySearchQuery = string.Empty;
 
         [ObservableProperty]
+        private DateTime? _inventoryFromDate = new DateTime(2026, 1, 1);
+
+        [ObservableProperty]
+        private DateTime? _inventoryToDate = DateTime.Today;
+
+        [RelayCommand]
+        public async Task FilterInventoryLedgerAsync()
+        {
+            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery);
+            InventoryItems = new ObservableCollection<Item>(items);
+            TotalInventoryItemsCount = items.Count;
+            TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
+            TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
+
+            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(InventoryFromDate, InventoryToDate);
+            InventoryLedgerEntries = new ObservableCollection<InventoryLedger>(invLedgerList);
+        }
+
+        [ObservableProperty]
         private int _totalJournalCount;
 
         [ObservableProperty]

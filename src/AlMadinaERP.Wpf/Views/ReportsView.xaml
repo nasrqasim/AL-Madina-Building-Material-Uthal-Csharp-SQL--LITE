@@ -36,9 +36,9 @@
                                         <ColumnDefinition Width="140"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox Grid.Column="0" Text="{Binding InventorySearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,10,0"/>
-                                    <DatePicker Grid.Column="1" Height="34" Margin="0,0,10,0"/>
-                                    <DatePicker Grid.Column="2" Height="34" Margin="0,0,10,0"/>
-                                    <Button Grid.Column="4" Content="Generate Report" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Height="34" Cursor="Hand"/>
+                                    <DatePicker Grid.Column="1" SelectedDate="{Binding InventoryFromDate, Mode=TwoWay}" Height="34" Margin="0,0,10,0"/>
+                                    <DatePicker Grid.Column="2" SelectedDate="{Binding InventoryToDate, Mode=TwoWay}" Height="34" Margin="0,0,10,0"/>
+                                    <Button Grid.Column="4" Command="{Binding FilterInventoryLedgerCommand}" Content="Generate Report" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Height="34" Cursor="Hand"/>
                                 </Grid>
 
                                 <DataGrid ItemsSource="{Binding InventoryItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" MinHeight="380" RowHeight="40" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">

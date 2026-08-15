@@ -253,7 +253,6 @@ namespace AlMadinaERP.Services
             return await q
                 .OrderByDescending(l => l.Date)
                 .ThenByDescending(l => l.Id)
-                .Take(1000)
                 .AsNoTracking()
                 .ToListAsync();
         }
