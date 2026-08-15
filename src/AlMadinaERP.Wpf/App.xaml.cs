@@ -20,6 +20,9 @@ namespace AlMadinaERP.Wpf
 
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // Register universal mouse wheel and touchpad scrolling handler across entire application
+            AlMadinaERP.Wpf.Helpers.UniversalScrollHelper.RegisterGlobalScrollHandler();
+
             // PRIORITY 1 & 8: Global exception handling with infinite loop prevention
             DispatcherUnhandledException += (s, ev) =>
             {
