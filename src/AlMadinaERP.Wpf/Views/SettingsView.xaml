@@ -153,25 +153,6 @@
                     <TextBlock Text="{Binding BackupStatusMessage}" Foreground="#16A34A" FontSize="12" FontWeight="Bold" Margin="0,0,0,14"/>
                 </StackPanel>
             </TabItem>
-
-            <!-- TAB 3: AUTOMATED TESTING & VERIFICATION (23 STEPS) -->
-            <TabItem Header="🧪 Automated Verification (23 Steps)" FontSize="14" FontWeight="Bold" Padding="14,8">
-                <StackPanel Margin="0,16,0,0">
-                    <Grid Margin="0,0,0,16">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Automated Terminal Testing &amp; Verification" Foreground="#0F172A" FontSize="22" FontWeight="Bold"/>
-                            <TextBlock Text="Populate demo data and verify all 23 functional steps across Customers, Vendors, Inventory, Sales, Purchases, Ledgers, Dashboard &amp; Reports." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <Button Content="🚀 RUN AUTOMATED VERIFICATION (23 STEPS)" Command="{Binding SeedDemoDataAndVerifyAllCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" Padding="16,10" HorizontalAlignment="Right" Cursor="Hand"/>
-                    </Grid>
-
-                    <Border Background="#0F172A" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="8" Padding="16" MinHeight="420">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <TextBox Text="{Binding VerificationReportResult}" Foreground="#38BDF8" Background="Transparent" BorderThickness="0" FontFamily="Consolas, Courier New" FontSize="12" IsReadOnly="True" TextWrapping="Wrap"/>
-                        </ScrollViewer>
-                    </Border>
-                </StackPanel>
-            </TabItem>
         </TabControl>
     </ScrollViewer>
 </UserControl>
