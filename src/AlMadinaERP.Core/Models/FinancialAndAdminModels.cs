@@ -42,8 +42,14 @@ namespace AlMadinaERP.Core.Models
         public string IncomeType { get; set; } = "One Time"; // One Time, Recurring
     }
 
-    public class Payment
+    public class Payment : System.ComponentModel.INotifyPropertyChanged
     {
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+        }
+
         public int Id { get; set; }
         public string PaymentNumber { get; set; } = string.Empty;
         
@@ -65,11 +71,64 @@ namespace AlMadinaERP.Core.Models
         [NotMapped]
         public string PartyName => PayToCategory == "Customer" ? CustomerName : VendorName;
         
-        public decimal Amount { get; set; }
-        public decimal WhtRatePercent { get; set; }
-        public decimal WhtAmount { get; set; }
-        public decimal NetAmountToPay { get; set; }
-        
+        private decimal _amount;
+        public decimal Amount
+        {
+            get => _amount;
+            set
+            {
+                if (_amount == value) return;
+                _amount = value;
+                RecalculateWht();
+                OnPropertyChanged();
+            }
+        }
+
+        private decimal _whtRatePercent;
+        public decimal WhtRatePercent
+        {
+            get => _whtRatePercent;
+            set
+            {
+                if (_whtRatePercent == value) return;
+                _whtRatePercent = value;
+                RecalculateWht();
+                OnPropertyChanged();
+            }
+        }
+
+        private decimal _whtAmount;
+        public decimal WhtAmount
+        {
+            get => _whtAmount;
+            set
+            {
+                if (_whtAmount == value) return;
+                _whtAmount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private decimal _netAmountToPay;
+        public decimal NetAmountToPay
+        {
+            get => _netAmountToPay;
+            set
+            {
+                if (_netAmountToPay == value) return;
+                _netAmountToPay = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public void RecalculateWht()
+        {
+            var wht = (_amount * _whtRatePercent) / 100m;
+            var net = _amount - wht;
+            if (WhtAmount != wht) WhtAmount = wht;
+            if (NetAmountToPay != net) NetAmountToPay = net;
+        }
+
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
         
         public int? BankId { get; set; }
