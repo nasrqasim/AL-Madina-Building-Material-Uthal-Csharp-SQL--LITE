@@ -271,9 +271,12 @@ namespace AlMadinaERP.Wpf.ViewModels
             {
                 if (e.PropertyName == nameof(PurchaseInvoiceItem.Quantity) ||
                     e.PropertyName == nameof(PurchaseInvoiceItem.Rate) ||
+                    e.PropertyName == nameof(PurchaseInvoiceItem.LengthFeet) ||
+                    e.PropertyName == nameof(PurchaseInvoiceItem.RatePerFoot) ||
                     e.PropertyName == nameof(PurchaseInvoiceItem.DiscountPercent) ||
                     e.PropertyName == nameof(PurchaseInvoiceItem.TaxPercent) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.Item))
+                    e.PropertyName == nameof(PurchaseInvoiceItem.Item) ||
+                    e.PropertyName == nameof(PurchaseInvoiceItem.TotalPrice))
                 {
                     RecalculateTotals();
                 }
@@ -318,17 +321,10 @@ namespace AlMadinaERP.Wpf.ViewModels
             {
                 foreach (var item in NewPurchase.Items)
                 {
-                    var lineSubtotal = item.Quantity * item.Rate;
-                    var disc = (lineSubtotal * item.DiscountPercent) / 100m;
-                    var tax = ((lineSubtotal - disc) * item.TaxPercent) / 100m;
-                    var total = lineSubtotal - disc + tax;
-
-                    if (item.DiscountAmount != disc) item.DiscountAmount = disc;
-                    if (item.TaxAmount != tax) item.TaxAmount = tax;
-                    if (item.TotalPrice != total) item.TotalPrice = total;
+                    item.Recalculate();
                 }
 
-                NewPurchase.Subtotal = NewPurchase.Items.Sum(i => i.Quantity * i.Rate);
+                NewPurchase.Subtotal = NewPurchase.Items.Sum(i => i.TotalPrice + i.DiscountAmount - i.TaxAmount);
                 NewPurchase.DiscountAmount = NewPurchase.Items.Sum(i => i.DiscountAmount);
                 NewPurchase.TaxAmount = NewPurchase.Items.Sum(i => i.TaxAmount);
                 NewPurchase.TotalAmount = (NewPurchase.Subtotal - NewPurchase.DiscountAmount) + NewPurchase.TaxAmount + NewPurchase.ExtraExpenses + NewPurchase.VehicleCharges;

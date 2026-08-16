@@ -347,8 +347,11 @@ namespace AlMadinaERP.Wpf.ViewModels
             {
                 if (e.PropertyName == nameof(SaleInvoiceItem.Quantity) ||
                     e.PropertyName == nameof(SaleInvoiceItem.Rate) ||
+                    e.PropertyName == nameof(SaleInvoiceItem.LengthFeet) ||
+                    e.PropertyName == nameof(SaleInvoiceItem.RatePerFoot) ||
                     e.PropertyName == nameof(SaleInvoiceItem.DiscountPercent) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.Item))
+                    e.PropertyName == nameof(SaleInvoiceItem.Item) ||
+                    e.PropertyName == nameof(SaleInvoiceItem.TotalPrice))
                 {
                     RecalculateTotals();
                 }
@@ -393,17 +396,12 @@ namespace AlMadinaERP.Wpf.ViewModels
             {
                 foreach (var item in NewInvoice.Items)
                 {
-                    var lineSubtotal = item.Quantity * item.Rate;
-                    var disc = (lineSubtotal * item.DiscountPercent) / 100m;
-                    var total = lineSubtotal - disc;
-
-                    if (item.DiscountAmount != disc) item.DiscountAmount = disc;
-                    if (item.TotalPrice != total) item.TotalPrice = total;
+                    item.Recalculate();
                 }
 
-                NewInvoice.Subtotal = NewInvoice.Items.Sum(i => i.Quantity * i.Rate);
+                NewInvoice.Subtotal = NewInvoice.Items.Sum(i => i.TotalPrice + i.DiscountAmount);
                 NewInvoice.DiscountAmount = NewInvoice.Items.Sum(i => i.DiscountAmount);
-                NewInvoice.TotalAmount = Math.Max(0m, (NewInvoice.Subtotal - NewInvoice.DiscountAmount) + NewInvoice.ExtraCharges - NewInvoice.AdditionalDiscount);
+                NewInvoice.TotalAmount = Math.Max(0m, (NewInvoice.Subtotal - NewInvoice.DiscountAmount) + NewInvoice.ExtraCharges + NewInvoice.VehicleCharges - NewInvoice.AdditionalDiscount);
                 
                 // Refund calculation
                 NewInvoice.GrossRefund = NewInvoice.TotalAmount;
