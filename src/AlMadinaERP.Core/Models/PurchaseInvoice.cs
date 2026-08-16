@@ -199,6 +199,11 @@ namespace AlMadinaERP.Core.Models
             {
                 if (_lengthFeet == value) return;
                 _lengthFeet = value;
+                if (value > 0 && _ratePerFoot == 0 && _rate > 0)
+                {
+                    _ratePerFoot = _rate;
+                    OnPropertyChanged(nameof(RatePerFoot));
+                }
                 Recalculate();
                 OnPropertyChanged();
             }
@@ -212,6 +217,11 @@ namespace AlMadinaERP.Core.Models
             {
                 if (_ratePerFoot == value) return;
                 _ratePerFoot = value;
+                if (value > 0 && _rate != value)
+                {
+                    _rate = value;
+                    OnPropertyChanged(nameof(Rate));
+                }
                 Recalculate();
                 OnPropertyChanged();
             }
@@ -222,6 +232,7 @@ namespace AlMadinaERP.Core.Models
         {
             get
             {
+                if (LengthFeet > 0) return true;
                 if (!string.IsNullOrWhiteSpace(ItemName))
                 {
                     var n = ItemName.Trim().ToUpper();
@@ -229,7 +240,7 @@ namespace AlMadinaERP.Core.Models
                         return true;
                 }
                 if (Item != null && Item.IsSpecialLengthItem) return true;
-                return LengthFeet > 0 && RatePerFoot > 0;
+                return false;
             }
         }
 
@@ -261,7 +272,7 @@ namespace AlMadinaERP.Core.Models
             {
                 if (_rate == value) return;
                 _rate = value;
-                if (IsSpecialLengthItem && value > 0 && RatePerFoot != value)
+                if (value > 0)
                 {
                     _ratePerFoot = value;
                     OnPropertyChanged(nameof(RatePerFoot));
@@ -328,9 +339,10 @@ namespace AlMadinaERP.Core.Models
         public void Recalculate()
         {
             decimal gross;
-            if (IsSpecialLengthItem && LengthFeet > 0 && RatePerFoot > 0)
+            if (LengthFeet > 0)
             {
-                gross = Quantity * LengthFeet * RatePerFoot;
+                var effRate = RatePerFoot > 0 ? RatePerFoot : Rate;
+                gross = Quantity * LengthFeet * effRate;
             }
             else
             {
