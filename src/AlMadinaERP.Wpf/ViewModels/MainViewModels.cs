@@ -41,6 +41,7 @@ namespace AlMadinaERP.Wpf.ViewModels
         public SalaryViewModel SalaryVM { get; }
         public ReportsViewModel ReportsVM { get; }
         public SettingsViewModel SettingsVM { get; }
+        public CustomerOrdersViewModel CustomerOrdersVM { get; }
 
         public MainViewModel(
             DashboardViewModel dashboardVM,
@@ -56,6 +57,7 @@ namespace AlMadinaERP.Wpf.ViewModels
             SalaryViewModel salaryVM,
             ReportsViewModel reportsVM,
             SettingsViewModel settingsVM,
+            CustomerOrdersViewModel customerOrdersVM,
             IAuthService authService)
         {
             _authService = authService;
@@ -72,10 +74,12 @@ namespace AlMadinaERP.Wpf.ViewModels
             SalaryVM = salaryVM;
             ReportsVM = reportsVM;
             SettingsVM = settingsVM;
+            CustomerOrdersVM = customerOrdersVM;
 
             _currentUser = _authService.CurrentUser?.FullName ?? "Superadmin";
             _currentView = dashboardVM;
         }
+
 
         [RelayCommand]
         public void Logout(System.Windows.Window? mainWindow)
@@ -276,6 +280,12 @@ namespace AlMadinaERP.Wpf.ViewModels
                 CurrentView = SettingsVM;
                 loadTask = () => SettingsVM.LoadSettingsAsync();
             }
+            else if (tabName.StartsWith("Customer Order") || tabName.StartsWith("CustomerOrder") || tabName.Contains("Customer Order"))
+            {
+                CurrentView = CustomerOrdersVM;
+                loadTask = () => CustomerOrdersVM.LoadOrdersAsync();
+            }
+
 
             if (loadTask != null)
             {

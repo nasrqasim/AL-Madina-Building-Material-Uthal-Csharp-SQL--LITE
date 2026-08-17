@@ -142,6 +142,17 @@ namespace AlMadinaERP.Core.Interfaces
         void PrintStaffLedger(Staff staff, IEnumerable<SalaryLedgerRowDto> entries, CompanySetting company);
         void PrintSalaryStaffRegister(IEnumerable<Staff> staffs, CompanySetting company);
         void PrintReportTable(string title, IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows, IEnumerable<string>? totalsRow, CompanySetting company);
+        void PrintCustomerOrder(CustomerOrder order, CompanySetting company);
+    }
+
+    public interface ICustomerOrderService
+    {
+        Task<List<CustomerOrder>> GetCustomerOrdersAsync(string searchQuery = "", string statusFilter = "All");
+        Task<CustomerOrder?> GetCustomerOrderByIdAsync(int id);
+        Task<CustomerOrder> SaveCustomerOrderAsync(CustomerOrder order);
+        Task DeleteCustomerOrderAsync(int id);
+        Task<string> GenerateNextOrderNumberAsync();
+        Task<CustomerOrder?> ToggleOrderStatusAsync(int id);
     }
 
     public interface IBackupService

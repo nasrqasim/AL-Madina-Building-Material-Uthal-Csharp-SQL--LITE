@@ -48,7 +48,11 @@
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CustomerOrdersViewModel}">
+            <views:CustomerOrdersView/>
+        </DataTemplate>
     </Window.Resources>
+
 
     <Grid>
         <Grid.RowDefinitions>
@@ -199,8 +203,16 @@
                                 </StackPanel>
                             </Expander>
 
+                            <!-- 6. Customer Orders -->
+                            <Button Style="{DynamicResource NavButton}" Command="{Binding NavigateTabCommand}" CommandParameter="Customer Orders">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📋 " FontSize="13"/>
+                                    <TextBlock Text="Customer Orders" FontSize="13" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
 
                             <!-- 7. Receipts -->
+
                             <Expander IsExpanded="True">
                                 <Expander.Header>
                                     <StackPanel Orientation="Horizontal">

@@ -32,6 +32,8 @@ namespace AlMadinaERP.Data
         public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
         public DbSet<CompanySetting> CompanySettings => Set<CompanySetting>();
         public DbSet<User> Users => Set<User>();
+        public DbSet<CustomerOrder> CustomerOrders => Set<CustomerOrder>();
+        public DbSet<CustomerOrderItem> CustomerOrderItems => Set<CustomerOrderItem>();
 
         public AppDbContext()
         {
@@ -112,6 +114,16 @@ namespace AlMadinaERP.Data
 
             modelBuilder.Entity<Salary>()
                 .HasIndex(s => new { s.StaffId, s.Date });
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasIndex(co => co.OrderNumber);
+            modelBuilder.Entity<CustomerOrder>()
+                .HasIndex(co => co.CustomerName);
+            modelBuilder.Entity<CustomerOrder>()
+                .HasIndex(co => co.Status);
+
+            modelBuilder.Entity<CustomerOrderItem>()
+                .HasIndex(coi => coi.CustomerOrderId);
 
             // Decimal precision / SQLite numeric storage
             modelBuilder.Entity<Customer>().Property(c => c.OwesAmount).HasConversion<double>();
@@ -470,7 +482,35 @@ namespace AlMadinaERP.Data
 
                 // Items
                 "ALTER TABLE Items ADD COLUMN LengthFeet REAL NOT NULL DEFAULT 0;",
-                "ALTER TABLE Items ADD COLUMN RatePerFoot REAL NOT NULL DEFAULT 0;"
+                "ALTER TABLE Items ADD COLUMN RatePerFoot REAL NOT NULL DEFAULT 0;",
+
+                // CustomerOrders & CustomerOrderItems
+                @"CREATE TABLE IF NOT EXISTS CustomerOrders (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    OrderNumber TEXT DEFAULT '',
+                    CustomerName TEXT DEFAULT '',
+                    Address TEXT DEFAULT '',
+                    ContactNumber TEXT DEFAULT '',
+                    OrderDate TEXT NOT NULL,
+                    ReceivingDate TEXT DEFAULT NULL,
+                    Status TEXT DEFAULT 'Pending',
+                    TotalAmount REAL DEFAULT 0,
+                    CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+                );",
+
+                @"CREATE TABLE IF NOT EXISTS CustomerOrderItems (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CustomerOrderId INTEGER NOT NULL,
+                    ItemId INTEGER DEFAULT NULL,
+                    ItemNameSnapshot TEXT DEFAULT '',
+                    ItemCode TEXT DEFAULT '',
+                    Unit TEXT DEFAULT '',
+                    Quantity REAL DEFAULT 0,
+                    Rate REAL DEFAULT 0,
+                    LineTotal REAL DEFAULT 0,
+                    FOREIGN KEY (CustomerOrderId) REFERENCES CustomerOrders(Id) ON DELETE CASCADE
+                );"
             };
 
             foreach (var sql in migrationSql)

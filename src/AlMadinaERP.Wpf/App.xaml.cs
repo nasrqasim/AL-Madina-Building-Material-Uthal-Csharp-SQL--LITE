@@ -130,6 +130,7 @@ namespace AlMadinaERP.Wpf
             services.AddScoped<IBackupService, BackupService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IDatabaseSeederAndVerifierService, DatabaseSeederAndVerifierService>();
+            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
             // ViewModels (Transient so navigation gets fresh services & DbContext)
             services.AddTransient<MainViewModel>();
@@ -147,6 +148,8 @@ namespace AlMadinaERP.Wpf
             services.AddTransient<SalaryViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<SettingsViewModel>();
+            services.AddTransient<CustomerOrdersViewModel>();
+
 
             // Views
             services.AddTransient<MainWindow>();
