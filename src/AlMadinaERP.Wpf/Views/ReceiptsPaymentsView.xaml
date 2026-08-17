@@ -75,7 +75,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="CUSTOMER / ACCOUNT" Binding="{Binding CustomerName}" Width="220"/>
+                                <DataGridTextColumn Header="CUSTOMER / PAYER" Binding="{Binding PayerName}" Width="220"/>
                                 <DataGridTextColumn Header="RECEIVED BY / BANK" Binding="{Binding ReceivedBy}" Width="150"/>
                                 <DataGridTextColumn Header="AMOUNT" Binding="{Binding Amount, StringFormat='PKR {0:N2}'}" Width="120" FontWeight="Bold" Foreground="#16A34A"/>
                                 <DataGridTemplateColumn Header="STATUS" Width="100">
@@ -142,7 +142,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="VOUCHER #" Binding="{Binding ReceiptNumber}" Width="130" FontWeight="Bold"/>
                                 <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='yyyy-MM-dd'}" Width="110"/>
-                                <DataGridTextColumn Header="CUSTOMER / PAYER" Binding="{Binding CustomerName}" Width="220"/>
+                                <DataGridTextColumn Header="CUSTOMER / PAYER" Binding="{Binding PayerName}" Width="220"/>
                                 <DataGridTextColumn Header="BANK NAME" Binding="{Binding BankName}" Width="150"/>
                                 <DataGridTextColumn Header="ACCOUNT #" Binding="{Binding BankAccountNo}" Width="140"/>
                                 <DataGridTextColumn Header="AMOUNT" Binding="{Binding Amount, StringFormat='PKR {0:N2}'}" Width="120" FontWeight="Bold" Foreground="#16A34A"/>

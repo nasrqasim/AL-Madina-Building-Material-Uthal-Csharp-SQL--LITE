@@ -231,16 +231,32 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private bool _isVendorPayment = true;
 
-        public bool IsCustomerPayment => !_isVendorPayment;
+        public bool IsCustomerPayment => !IsVendorPayment;
 
         [RelayCommand]
         public void SwitchPaymentPartyType(string partyType)
         {
             IsVendorPayment = string.Equals(partyType, "Vendor", StringComparison.OrdinalIgnoreCase);
             OnPropertyChanged(nameof(IsCustomerPayment));
-            if (NewPayment != null)
+            if (IsVendorPayment)
             {
-                NewPayment.PayToCategory = IsVendorPayment ? "Vendor" : "Customer";
+                SelectedCustomer = null;
+                if (NewPayment != null)
+                {
+                    NewPayment.PayToCategory = "Vendor";
+                    NewPayment.CustomerId = null;
+                    NewPayment.CustomerName = string.Empty;
+                }
+            }
+            else
+            {
+                SelectedVendor = null;
+                if (NewPayment != null)
+                {
+                    NewPayment.PayToCategory = "Customer";
+                    NewPayment.VendorId = null;
+                    NewPayment.VendorName = string.Empty;
+                }
             }
         }
 
@@ -259,6 +275,8 @@ namespace AlMadinaERP.Wpf.ViewModels
         private void ResetNewReceipt()
         {
             var isBank = ActiveSubView == "BankReceiptForm" || ActiveSubView == "BankReceiptList";
+            SelectedCustomer = null;
+            SelectedBank = null;
             NewReceipt = new Receipt
             {
                 ReceiptNumber = (isBank ? "BR-" : "CR-") + DateTime.Now.ToString("fffSSm"),
@@ -287,6 +305,11 @@ namespace AlMadinaERP.Wpf.ViewModels
         private void ResetNewPayment()
         {
             var isBank = ActiveSubView == "BankPaymentForm" || ActiveSubView == "BankPaymentList";
+            SelectedVendor = null;
+            SelectedCustomer = null;
+            SelectedBank = null;
+            IsVendorPayment = true;
+            OnPropertyChanged(nameof(IsCustomerPayment));
             NewPayment = new Payment
             {
                 PaymentNumber = (isBank ? "BP-" : "CP-") + DateTime.Now.ToString("fffSSm"),
@@ -356,10 +379,16 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (value != null)
             {
-                NewReceipt.CustomerId = value.Id;
-                NewReceipt.CustomerName = value.Name;
-                NewPayment.CustomerId = value.Id;
-                NewPayment.CustomerName = value.Name;
+                if (NewReceipt != null)
+                {
+                    NewReceipt.CustomerId = value.Id > 0 ? value.Id : null;
+                    NewReceipt.CustomerName = value.Name;
+                }
+                if (NewPayment != null && !IsVendorPayment)
+                {
+                    NewPayment.CustomerId = value.Id > 0 ? value.Id : null;
+                    NewPayment.CustomerName = value.Name;
+                }
             }
         }
 
@@ -367,8 +396,11 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (value != null)
             {
-                NewPayment.VendorId = value.Id;
-                NewPayment.VendorName = value.Name;
+                if (NewPayment != null && IsVendorPayment)
+                {
+                    NewPayment.VendorId = value.Id > 0 ? value.Id : null;
+                    NewPayment.VendorName = value.Name;
+                }
             }
         }
 
@@ -488,17 +520,13 @@ namespace AlMadinaERP.Wpf.ViewModels
 
             if (SelectedCustomer != null)
             {
-                NewReceipt.CustomerId = SelectedCustomer.Id;
+                NewReceipt.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
                 NewReceipt.CustomerName = SelectedCustomer.Name;
-            }
-            else if (string.IsNullOrWhiteSpace(NewReceipt.CustomerName))
-            {
-                NewReceipt.CustomerName = "Cash Customer";
             }
 
             if (SelectedBank != null)
             {
-                NewReceipt.BankId = SelectedBank.Id;
+                NewReceipt.BankId = SelectedBank.Id > 0 ? SelectedBank.Id : null;
                 NewReceipt.BankName = SelectedBank.BankName;
                 NewReceipt.BankAccountNo = SelectedBank.AccountNumber;
             }
@@ -529,20 +557,30 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewPayment.PaymentNumber = "PAY-" + DateTime.Now.ToString("fffSSm");
             }
 
-            if (SelectedVendor != null)
+            if (IsVendorPayment)
             {
-                NewPayment.VendorId = SelectedVendor.Id;
-                NewPayment.VendorName = SelectedVendor.Name;
+                NewPayment.PayToCategory = "Vendor";
+                NewPayment.CustomerId = null;
+                if (SelectedVendor != null)
+                {
+                    NewPayment.VendorId = SelectedVendor.Id > 0 ? SelectedVendor.Id : null;
+                    NewPayment.VendorName = SelectedVendor.Name;
+                }
             }
-            else if (SelectedCustomer != null)
+            else
             {
-                NewPayment.CustomerId = SelectedCustomer.Id;
-                NewPayment.CustomerName = SelectedCustomer.Name;
+                NewPayment.PayToCategory = "Customer";
+                NewPayment.VendorId = null;
+                if (SelectedCustomer != null)
+                {
+                    NewPayment.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
+                    NewPayment.CustomerName = SelectedCustomer.Name;
+                }
             }
 
             if (SelectedBank != null)
             {
-                NewPayment.BankId = SelectedBank.Id;
+                NewPayment.BankId = SelectedBank.Id > 0 ? SelectedBank.Id : null;
                 NewPayment.BankName = SelectedBank.BankName;
                 NewPayment.BankAccountNo = SelectedBank.AccountNumber;
             }
@@ -696,14 +734,34 @@ namespace AlMadinaERP.Wpf.ViewModels
         public void EditReceipt(Receipt receipt)
         {
             if (receipt == null) return;
+            ActiveSubView = receipt.ReceiptType == ReceiptType.BankReceipt ? "BankReceiptForm" : "CashReceiptForm";
+
             NewReceipt = receipt;
-            if (receipt.ReceiptType == ReceiptType.BankReceipt)
+            SelectedCustomer = null;
+            SelectedBank = null;
+
+            if (receipt.CustomerId.HasValue && receipt.CustomerId.Value > 0)
+                SelectedCustomer = Customers.FirstOrDefault(c => c.Id == receipt.CustomerId.Value);
+            else if (!string.IsNullOrWhiteSpace(receipt.CustomerName))
+                SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(receipt.CustomerName, StringComparison.OrdinalIgnoreCase));
+
+            if (SelectedCustomer == null && !string.IsNullOrWhiteSpace(receipt.CustomerName))
             {
-                ActiveSubView = "BankReceiptForm";
+                var tempCust = new Customer { Id = receipt.CustomerId ?? 0, Name = receipt.CustomerName };
+                Customers.Add(tempCust);
+                SelectedCustomer = tempCust;
             }
-            else
+
+            if (receipt.BankId.HasValue && receipt.BankId.Value > 0)
+                SelectedBank = Banks.FirstOrDefault(b => b.Id == receipt.BankId.Value);
+            else if (!string.IsNullOrWhiteSpace(receipt.BankName))
+                SelectedBank = Banks.FirstOrDefault(b => b.BankName.Equals(receipt.BankName, StringComparison.OrdinalIgnoreCase));
+
+            if (SelectedBank == null && !string.IsNullOrWhiteSpace(receipt.BankName))
             {
-                ActiveSubView = "CashReceiptForm";
+                var tempBank = new Bank { Id = receipt.BankId ?? 0, BankName = receipt.BankName, AccountNumber = receipt.BankAccountNo ?? "" };
+                Banks.Add(tempBank);
+                SelectedBank = tempBank;
             }
         }
 
@@ -711,14 +769,56 @@ namespace AlMadinaERP.Wpf.ViewModels
         public void EditPayment(Payment payment)
         {
             if (payment == null) return;
+            ActiveSubView = payment.PaymentType == PaymentType.BankPayment ? "BankPaymentForm" : "CashPaymentForm";
+
             NewPayment = payment;
-            if (payment.PaymentType == PaymentType.BankPayment)
+            SelectedVendor = null;
+            SelectedCustomer = null;
+            SelectedBank = null;
+
+            if (payment.PayToCategory == "Customer")
             {
-                ActiveSubView = "BankPaymentForm";
+                IsVendorPayment = false;
+                OnPropertyChanged(nameof(IsCustomerPayment));
+                if (payment.CustomerId.HasValue && payment.CustomerId.Value > 0)
+                    SelectedCustomer = Customers.FirstOrDefault(c => c.Id == payment.CustomerId.Value);
+                else if (!string.IsNullOrWhiteSpace(payment.CustomerName))
+                    SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(payment.CustomerName, StringComparison.OrdinalIgnoreCase));
+
+                if (SelectedCustomer == null && !string.IsNullOrWhiteSpace(payment.CustomerName))
+                {
+                    var tempCust = new Customer { Id = payment.CustomerId ?? 0, Name = payment.CustomerName };
+                    Customers.Add(tempCust);
+                    SelectedCustomer = tempCust;
+                }
             }
             else
             {
-                ActiveSubView = "CashPaymentForm";
+                IsVendorPayment = true;
+                OnPropertyChanged(nameof(IsCustomerPayment));
+                if (payment.VendorId.HasValue && payment.VendorId.Value > 0)
+                    SelectedVendor = Vendors.FirstOrDefault(v => v.Id == payment.VendorId.Value);
+                else if (!string.IsNullOrWhiteSpace(payment.VendorName))
+                    SelectedVendor = Vendors.FirstOrDefault(v => v.Name.Equals(payment.VendorName, StringComparison.OrdinalIgnoreCase));
+
+                if (SelectedVendor == null && !string.IsNullOrWhiteSpace(payment.VendorName))
+                {
+                    var tempVend = new Vendor { Id = payment.VendorId ?? 0, Name = payment.VendorName };
+                    Vendors.Add(tempVend);
+                    SelectedVendor = tempVend;
+                }
+            }
+
+            if (payment.BankId.HasValue && payment.BankId.Value > 0)
+                SelectedBank = Banks.FirstOrDefault(b => b.Id == payment.BankId.Value);
+            else if (!string.IsNullOrWhiteSpace(payment.BankName))
+                SelectedBank = Banks.FirstOrDefault(b => b.BankName.Equals(payment.BankName, StringComparison.OrdinalIgnoreCase));
+
+            if (SelectedBank == null && !string.IsNullOrWhiteSpace(payment.BankName))
+            {
+                var tempBank = new Bank { Id = payment.BankId ?? 0, BankName = payment.BankName, AccountNumber = payment.BankAccountNo ?? "" };
+                Banks.Add(tempBank);
+                SelectedBank = tempBank;
             }
         }
 
@@ -753,89 +853,17 @@ namespace AlMadinaERP.Wpf.ViewModels
         private async Task PrintReceiptListInternalAsync(string title, System.Collections.Generic.IEnumerable<Receipt> list)
         {
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var doc = new System.Windows.Documents.FlowDocument
-            {
-                PageWidth = 794,
-                PageHeight = 1123,
-                PagePadding = new System.Windows.Thickness(30),
-                FontFamily = new System.Windows.Media.FontFamily("Times New Roman"),
-                FontSize = 10
-            };
-
-            var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-            var header = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{compName}\n{title}\nDate: {DateTime.Now:dd/MM/yyyy HH:mm} | Total Records: {list.Count()}"))
-            {
-                TextAlignment = System.Windows.TextAlignment.Center,
-                FontSize = 14,
-                FontWeight = System.Windows.FontWeights.Bold,
-                Margin = new System.Windows.Thickness(0, 0, 0, 15)
-            };
-            doc.Blocks.Add(header);
-
-            var table = new System.Windows.Documents.Table();
-            table.CellSpacing = 0;
-            table.BorderThickness = new System.Windows.Thickness(1);
-            table.BorderBrush = System.Windows.Media.Brushes.LightGray;
-
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(90) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(200) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(130) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(84) });
-
-            var rowGroup = new System.Windows.Documents.TableRowGroup();
-            var headerRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Maroon };
-            string[] headers = { "VOUCHER #", "DATE", "CUSTOMER / PAYER", "RECEIVED BY", "AMOUNT (PKR)", "STATUS" };
-            foreach (var h in headers)
-            {
-                headerRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(h))
-                {
-                    FontWeight = System.Windows.FontWeights.Bold,
-                    Foreground = System.Windows.Media.Brushes.White,
-                    FontSize = 9,
-                    Margin = new System.Windows.Thickness(4)
-                }));
-            }
-            rowGroup.Rows.Add(headerRow);
-
-            int rowIdx = 0;
-            decimal totalAmt = 0m;
-            foreach (var rec in list)
-            {
-                totalAmt += rec.Amount;
-                var bg = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White;
-                var r = new System.Windows.Documents.TableRow { Background = bg };
-
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(rec.ReceiptNumber ?? "")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(rec.Date.ToString("dd/MM/yyyy"))) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(rec.CustomerName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(rec.ReceivedBy ?? rec.BankName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{rec.Amount:N2}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Green, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(rec.Status ?? "Posted")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-
-                rowGroup.Rows.Add(r);
-                rowIdx++;
-            }
-
-            var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("TOTAL")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{list.Count()} Records")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{totalAmt:N2}")) { FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Green, FontSize = 10, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            rowGroup.Rows.Add(totalRow);
-
-            table.RowGroups.Add(rowGroup);
-            doc.Blocks.Add(table);
-
-            var printDialog = new System.Windows.Controls.PrintDialog();
-            if (printDialog.ShowDialog() == true)
-            {
-                var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                printDialog.PrintDocument(paginator, title);
-            }
+            var headers = new[] { "Voucher #", "Date", "Customer / Payer", "Received By / Bank", "Amount (PKR)", "Status" };
+            var rows = list.Select(rec => new[] {
+                rec.ReceiptNumber ?? "",
+                rec.Date.ToString("dd/MM/yyyy"),
+                rec.CustomerName ?? "",
+                rec.ReceivedBy ?? rec.BankName ?? "",
+                $"{rec.Amount:N2}",
+                rec.Status ?? "Posted"
+            });
+            var totals = new[] { "TOTAL", $"{list.Count()} Records", "", "", $"{list.Sum(r => r.Amount):N2}", "" };
+            _printService.PrintReportTable(title, headers, rows, totals, company);
         }
 
         [RelayCommand]
@@ -854,177 +882,33 @@ namespace AlMadinaERP.Wpf.ViewModels
         public async Task PrintExpenseListAsync()
         {
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var doc = new System.Windows.Documents.FlowDocument
-            {
-                PageWidth = 794,
-                PageHeight = 1123,
-                PagePadding = new System.Windows.Thickness(30),
-                FontFamily = new System.Windows.Media.FontFamily("Times New Roman"),
-                FontSize = 10
-            };
-
-            var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-            var header = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{compName}\nBUSINESS EXPENSES REGISTER\nDate: {DateTime.Now:dd/MM/yyyy HH:mm} | Total Records: {Expenses.Count}"))
-            {
-                TextAlignment = System.Windows.TextAlignment.Center,
-                FontSize = 14,
-                FontWeight = System.Windows.FontWeights.Bold,
-                Margin = new System.Windows.Thickness(0, 0, 0, 15)
-            };
-            doc.Blocks.Add(header);
-
-            var table = new System.Windows.Documents.Table();
-            table.CellSpacing = 0;
-            table.BorderThickness = new System.Windows.Thickness(1);
-            table.BorderBrush = System.Windows.Media.Brushes.LightGray;
-
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(90) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(180) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(130) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(100) });
-
-            var rowGroup = new System.Windows.Documents.TableRowGroup();
-            var headerRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Maroon };
-            string[] headers = { "VOUCHER #", "DATE", "TITLE / EXPENSE", "CATEGORY", "AMOUNT (PKR)", "STATUS" };
-            foreach (var h in headers)
-            {
-                headerRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(h))
-                {
-                    FontWeight = System.Windows.FontWeights.Bold,
-                    Foreground = System.Windows.Media.Brushes.White,
-                    FontSize = 9,
-                    Margin = new System.Windows.Thickness(4)
-                }));
-            }
-            rowGroup.Rows.Add(headerRow);
-
-            int rowIdx = 0;
-            decimal totalAmt = 0m;
-            foreach (var exp in Expenses)
-            {
-                totalAmt += exp.Amount;
-                var bg = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White;
-                var r = new System.Windows.Documents.TableRow { Background = bg };
-
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(exp.VoucherNumber ?? "")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(exp.Date.ToString("dd/MM/yyyy"))) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(exp.Title ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(exp.Category ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{exp.Amount:N2}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(exp.Status ?? "Paid")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-
-                rowGroup.Rows.Add(r);
-                rowIdx++;
-            }
-
-            var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("TOTAL")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{Expenses.Count} Records")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{totalAmt:N2}")) { FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, FontSize = 10, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            rowGroup.Rows.Add(totalRow);
-
-            table.RowGroups.Add(rowGroup);
-            doc.Blocks.Add(table);
-
-            var printDialog = new System.Windows.Controls.PrintDialog();
-            if (printDialog.ShowDialog() == true)
-            {
-                var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                printDialog.PrintDocument(paginator, "Business Expenses Register");
-            }
+            var headers = new[] { "Voucher #", "Date", "Expense Title", "Category", "Amount (PKR)", "Status" };
+            var rows = Expenses.Select(exp => new[] {
+                exp.VoucherNumber ?? "",
+                exp.Date.ToString("dd/MM/yyyy"),
+                exp.Title ?? "",
+                exp.Category ?? "",
+                $"{exp.Amount:N2}",
+                exp.Status ?? "Paid"
+            });
+            var totals = new[] { "TOTAL", $"{Expenses.Count} Records", "", "", $"{Expenses.Sum(e => e.Amount):N2}", "" };
+            _printService.PrintReportTable("Business Expenses Register", headers, rows, totals, company);
         }
 
         private async Task PrintPaymentListInternalAsync(string title, System.Collections.Generic.IEnumerable<Payment> list)
         {
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var doc = new System.Windows.Documents.FlowDocument
-            {
-                PageWidth = 794,
-                PageHeight = 1123,
-                PagePadding = new System.Windows.Thickness(30),
-                FontFamily = new System.Windows.Media.FontFamily("Times New Roman"),
-                FontSize = 10
-            };
-
-            var compName = string.IsNullOrEmpty(company.CompanyName) ? "AL MADINA BUILDING MATERIAL" : company.CompanyName;
-            var header = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{compName}\n{title}\nDate: {DateTime.Now:dd/MM/yyyy HH:mm} | Total Records: {list.Count()}"))
-            {
-                TextAlignment = System.Windows.TextAlignment.Center,
-                FontSize = 14,
-                FontWeight = System.Windows.FontWeights.Bold,
-                Margin = new System.Windows.Thickness(0, 0, 0, 15)
-            };
-            doc.Blocks.Add(header);
-
-            var table = new System.Windows.Documents.Table();
-            table.CellSpacing = 0;
-            table.BorderThickness = new System.Windows.Thickness(1);
-            table.BorderBrush = System.Windows.Media.Brushes.LightGray;
-
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(90) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(200) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(130) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-            table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(84) });
-
-            var rowGroup = new System.Windows.Documents.TableRowGroup();
-            var headerRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Maroon };
-            string[] headers = { "VOUCHER #", "DATE", "PARTY / PAYEE", "PAID FROM", "AMOUNT (PKR)", "STATUS" };
-            foreach (var h in headers)
-            {
-                headerRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(h))
-                {
-                    FontWeight = System.Windows.FontWeights.Bold,
-                    Foreground = System.Windows.Media.Brushes.White,
-                    FontSize = 9,
-                    Margin = new System.Windows.Thickness(4)
-                }));
-            }
-            rowGroup.Rows.Add(headerRow);
-
-            int rowIdx = 0;
-            decimal totalAmt = 0m;
-            foreach (var pay in list)
-            {
-                totalAmt += pay.Amount;
-                var bg = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White;
-                var r = new System.Windows.Documents.TableRow { Background = bg };
-
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(pay.PaymentNumber ?? "")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(pay.Date.ToString("dd/MM/yyyy"))) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(pay.PartyName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(pay.PaidFrom ?? pay.BankName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{pay.Amount:N2}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(pay.Status ?? "Posted")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-
-                rowGroup.Rows.Add(r);
-                rowIdx++;
-            }
-
-            var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("TOTAL")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{list.Count()} Records")) { FontWeight = System.Windows.FontWeights.Bold, FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{totalAmt:N2}")) { FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, FontSize = 10, Margin = new System.Windows.Thickness(4) }));
-            totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(""))));
-            rowGroup.Rows.Add(totalRow);
-
-            table.RowGroups.Add(rowGroup);
-            doc.Blocks.Add(table);
-
-            var printDialog = new System.Windows.Controls.PrintDialog();
-            if (printDialog.ShowDialog() == true)
-            {
-                var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                printDialog.PrintDocument(paginator, title);
-            }
+            var headers = new[] { "Voucher #", "Date", "Party / Payee", "Paid From / Bank", "Amount (PKR)", "Status" };
+            var rows = list.Select(pay => new[] {
+                pay.PaymentNumber ?? "",
+                pay.Date.ToString("dd/MM/yyyy"),
+                pay.PartyName ?? pay.VendorName ?? pay.CustomerName ?? "",
+                pay.PaidFrom ?? pay.BankName ?? "",
+                $"{pay.Amount:N2}",
+                pay.Status ?? "Posted"
+            });
+            var totals = new[] { "TOTAL", $"{list.Count()} Records", "", "", $"{list.Sum(p => p.Amount):N2}", "" };
+            _printService.PrintReportTable(title, headers, rows, totals, company);
         }
 
         [RelayCommand]
@@ -1067,6 +951,8 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (expense == null) return;
             NewExpense = expense;
+            if (expense.BankId.HasValue && expense.BankId.Value > 0)
+                SelectedBank = Banks.FirstOrDefault(b => b.Id == expense.BankId.Value);
             IsAddExpenseModalOpen = true;
         }
 
@@ -1249,6 +1135,26 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         [ObservableProperty]
         private string _searchQuery = string.Empty;
+
+        private System.Threading.CancellationTokenSource? _salarySearchCts;
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            _salarySearchCts?.Cancel();
+            _salarySearchCts = new System.Threading.CancellationTokenSource();
+            var token = _salarySearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await LoadSalariesAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
+        }
 
         [ObservableProperty]
         private decimal _totalBasicSalaries;
@@ -2110,6 +2016,16 @@ namespace AlMadinaERP.Wpf.ViewModels
             var rows = InventoryItems.Select(i => new[] { i.Code, i.Name, $"Rs. {i.PurchasePrice:N0}", $"Rs. {i.SalePrice:N0}", i.SellingUnit, $"{i.CurrentStock:N0} Pcs" });
             var totals = new[] { "TOTAL", $"{InventoryItems.Count} Items Recorded", "", "", "", $"Stock Value: Rs. {TotalInventoryStockValue:N0}" };
             _printService.PrintReportTable("Inventory Ledger Summary Report", headers, rows, totals, company);
+        }
+
+        [RelayCommand]
+        public async Task PrintLowStockReportAsync()
+        {
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            var headers = new[] { "Code", "Item Name", "Category", "Unit", "Current Stock", "Min Required Stock", "Reorder Status" };
+            var rows = LowStockAlerts.Select(a => new[] { a.Code, a.Name, a.CategoryName, a.Unit, $"{a.CurrentStock:N0}", $"{a.LowStockAlert:N0}", "Below Min Limit" });
+            var totals = new[] { "LOW STOCK ALERT TOTAL", $"{LowStockAlerts.Count} Items Below Threshold", "", "", "", "", "Action Required" };
+            _printService.PrintReportTable("Low Stock Alert Report", headers, rows, totals, company);
         }
 
         [RelayCommand]

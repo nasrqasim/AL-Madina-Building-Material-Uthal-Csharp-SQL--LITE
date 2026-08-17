@@ -155,6 +155,7 @@
                                 <TextBlock Text="Notifications for items below minimum required stock." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Command="{Binding PrintLowStockReportCommand}" Content="🖨️ Print Low Stock Report" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                                 <Button Command="{Binding GenerateReportsCommand}" Content="🔄 Refresh Alerts" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                             </StackPanel>
                         </Grid>

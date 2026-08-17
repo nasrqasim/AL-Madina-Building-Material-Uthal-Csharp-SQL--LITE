@@ -484,7 +484,10 @@ namespace AlMadinaERP.Wpf.ViewModels
             if (fullPurchase == null) return;
 
             NewPurchase = fullPurchase;
-            SelectedVendor = Vendors.FirstOrDefault(v => v.Id == fullPurchase.VendorId);
+            if (fullPurchase.VendorId.HasValue && fullPurchase.VendorId.Value > 0)
+                SelectedVendor = Vendors.FirstOrDefault(v => v.Id == fullPurchase.VendorId.Value);
+            else if (!string.IsNullOrWhiteSpace(fullPurchase.VendorName))
+                SelectedVendor = Vendors.FirstOrDefault(v => v.Name.Equals(fullPurchase.VendorName, StringComparison.OrdinalIgnoreCase));
             IsReturnMode = fullPurchase.Type == PurchaseType.PurchaseReturn;
             IsFormVisible = true;
 

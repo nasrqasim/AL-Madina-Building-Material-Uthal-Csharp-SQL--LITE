@@ -76,10 +76,13 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _statusFilter = "All";
 
+        private List<Item> _allMasterItems = new();
         private System.Threading.CancellationTokenSource? _salesSearchCts;
 
         partial void OnSearchQueryChanged(string value)
         {
+            FilterPosItems(value);
+
             _salesSearchCts?.Cancel();
             _salesSearchCts = new System.Threading.CancellationTokenSource();
             var token = _salesSearchCts.Token;
@@ -247,10 +250,10 @@ namespace AlMadinaERP.Wpf.ViewModels
                 Customers = new ObservableCollection<Customer>(custs);
             }
 
-            if (AvailableItems.Count == 0)
+            if (_allMasterItems == null || _allMasterItems.Count == 0)
             {
-                var items = await _inventoryService.SearchItemsAsync("");
-                AvailableItems = new ObservableCollection<Item>(items);
+                _allMasterItems = await _inventoryService.SearchItemsAsync("");
+                FilterPosItems(SearchQuery);
             }
         }
 
@@ -273,13 +276,36 @@ namespace AlMadinaERP.Wpf.ViewModels
             }
         }
 
+        private void FilterPosItems(string query)
+        {
+            if (_allMasterItems == null || _allMasterItems.Count == 0) return;
+
+            List<Item> filtered;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                filtered = _allMasterItems.ToList();
+            }
+            else
+            {
+                var term = query.Trim().ToLower();
+                filtered = _allMasterItems.Where(i =>
+                    (i.Name != null && i.Name.ToLower().Contains(term)) ||
+                    (i.Code != null && i.Code.ToLower().Contains(term)) ||
+                    (i.CategoryName != null && i.CategoryName.ToLower().Contains(term))
+                ).ToList();
+            }
+
+            AvailableItems = new ObservableCollection<Item>(filtered);
+        }
+
         private async Task EnsureItemsLoadedAsync()
         {
-            if (AvailableItems.Count == 0)
+            if (_allMasterItems == null || _allMasterItems.Count == 0)
             {
-                var items = await _inventoryService.SearchItemsAsync("");
-                foreach (var item in items) AvailableItems.Add(item);
+                _allMasterItems = await _inventoryService.SearchItemsAsync("");
             }
+            FilterPosItems(SearchQuery);
+
             if (Customers.Count == 0)
             {
                 var custs = await _customerService.SearchCustomersAsync("");
@@ -311,6 +337,7 @@ namespace AlMadinaERP.Wpf.ViewModels
             IsReturnMode = false;
             ActiveSubView = SalesActiveSubView.PosTerminal;
             ResetNewInvoice();
+            SearchQuery = string.Empty;
             _ = EnsureItemsLoadedAsync();
         }
 
@@ -600,7 +627,10 @@ namespace AlMadinaERP.Wpf.ViewModels
             if (fullInvoice == null) return;
 
             NewInvoice = fullInvoice;
-            SelectedCustomer = Customers.FirstOrDefault(c => c.Id == fullInvoice.CustomerId);
+            if (fullInvoice.CustomerId.HasValue && fullInvoice.CustomerId.Value > 0)
+                SelectedCustomer = Customers.FirstOrDefault(c => c.Id == fullInvoice.CustomerId.Value);
+            else if (!string.IsNullOrWhiteSpace(fullInvoice.CustomerName))
+                SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(fullInvoice.CustomerName, StringComparison.OrdinalIgnoreCase));
 
             if (fullInvoice.Type == InvoiceType.SaleReturn)
             {
@@ -630,115 +660,23 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
-        public void PrintSalesList()
+        public async Task PrintSalesListAsync()
         {
             try
             {
-                var printDialog = new System.Windows.Controls.PrintDialog();
-                if (printDialog.ShowDialog() == true)
-                {
-                    var doc = new System.Windows.Documents.FlowDocument();
-                    doc.PageWidth = 794;  // Standard A4 Width
-                    doc.PageHeight = 1123; // Standard A4 Height
-                    doc.PagePadding = new System.Windows.Thickness(35);
-                    doc.ColumnWidth = 724;
-                    doc.FontFamily = new System.Windows.Media.FontFamily("Times New Roman");
-
-                    var pHeader = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("AL MADINA BUILDING MATERIAL ERP"))
-                    {
-                        FontSize = 18,
-                        FontWeight = System.Windows.FontWeights.Bold,
-                        Foreground = System.Windows.Media.Brushes.Maroon,
-                        TextAlignment = System.Windows.TextAlignment.Center,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 4)
-                    };
-                    doc.Blocks.Add(pHeader);
-
-                    var pSub = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("SALE INVOICES REGISTER"))
-                    {
-                        FontSize = 13,
-                        FontWeight = System.Windows.FontWeights.Bold,
-                        Foreground = System.Windows.Media.Brushes.DarkSlateGray,
-                        TextAlignment = System.Windows.TextAlignment.Center,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 10)
-                    };
-                    doc.Blocks.Add(pSub);
-
-                    var pDate = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"Date: {DateTime.Now:dd/MM/yyyy HH:mm}   |   Total Invoices: {Invoices.Count}"))
-                    {
-                        FontSize = 10,
-                        Foreground = System.Windows.Media.Brushes.Gray,
-                        TextAlignment = System.Windows.TextAlignment.Right,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 14)
-                    };
-                    doc.Blocks.Add(pDate);
-
-                    var table = new System.Windows.Documents.Table();
-                    table.CellSpacing = 0;
-                    table.BorderThickness = new System.Windows.Thickness(1);
-                    table.BorderBrush = System.Windows.Media.Brushes.LightGray;
-
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(90) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(160) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(100) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(100) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(54) });
-
-                    var rowGroup = new System.Windows.Documents.TableRowGroup();
-
-                    var headerRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Maroon };
-                    string[] headers = { "INVOICE #", "DATE", "CUSTOMER", "TOTAL (PKR)", "PAID (PKR)", "BALANCE (PKR)", "STATUS" };
-                    foreach (var h in headers)
-                    {
-                        var cell = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(h))
-                        {
-                            FontWeight = System.Windows.FontWeights.Bold,
-                            Foreground = System.Windows.Media.Brushes.White,
-                            FontSize = 9,
-                            Margin = new System.Windows.Thickness(4)
-                        });
-                        headerRow.Cells.Add(cell);
-                    }
-                    rowGroup.Rows.Add(headerRow);
-
-                    int rowIdx = 0;
-                    foreach (var inv in Invoices)
-                    {
-                        var bg = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White;
-                        var r = new System.Windows.Documents.TableRow { Background = bg };
-
-                        decimal bal = inv.TotalAmount - inv.PaidAmount;
-
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(inv.InvoiceNumber ?? "")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(inv.Date.ToString("dd/MM/yyyy"))) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(inv.CustomerName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{inv.TotalAmount:N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{inv.PaidAmount:N0}")) { FontSize = 9, Foreground = System.Windows.Media.Brushes.Green, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{bal:N0}")) { FontSize = 9, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(inv.Status ?? "Posted")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-
-                        rowGroup.Rows.Add(r);
-                        rowIdx++;
-                    }
-
-                    var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("TOTAL")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{Invoices.Count} Invoices")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("")) { FontSize = 9 }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{GrandTotalSales:N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{Invoices.Sum(i => i.PaidAmount):N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Green, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{Invoices.Sum(i => i.TotalAmount - i.PaidAmount):N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("")) { FontSize = 9 }));
-                    rowGroup.Rows.Add(totalRow);
-
-                    table.RowGroups.Add(rowGroup);
-                    doc.Blocks.Add(table);
-
-                    var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                    printDialog.PrintDocument(paginator, "Sale Invoices Register");
-                }
+                var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+                var headers = new[] { "Invoice #", "Date", "Customer", "Total Amount (PKR)", "Paid (PKR)", "Balance (PKR)", "Status" };
+                var rows = Invoices.Select(inv => new[] {
+                    inv.InvoiceNumber ?? "",
+                    inv.Date.ToString("dd/MM/yyyy"),
+                    inv.CustomerName ?? "",
+                    $"{inv.TotalAmount:N0}",
+                    $"{inv.PaidAmount:N0}",
+                    $"{(inv.TotalAmount - inv.PaidAmount):N0}",
+                    inv.Status ?? "Posted"
+                });
+                var totals = new[] { "TOTAL SALE INVOICES", $"{Invoices.Count} Invoices", "", $"{GrandTotalSales:N0}", $"{Invoices.Sum(i => i.PaidAmount):N0}", $"{Invoices.Sum(i => i.TotalAmount - i.PaidAmount):N0}", "" };
+                _printService.PrintReportTable("Sale Invoices Register", headers, rows, totals, company);
             }
             catch (Exception ex)
             {
@@ -747,109 +685,45 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
-        public void PrintSalesReturnList()
+        public async Task PrintSalesReturnListAsync()
         {
             try
             {
-                var printDialog = new System.Windows.Controls.PrintDialog();
-                if (printDialog.ShowDialog() == true)
-                {
-                    var doc = new System.Windows.Documents.FlowDocument();
-                    doc.PageWidth = 794;  // Standard A4 Width
-                    doc.PageHeight = 1123; // Standard A4 Height
-                    doc.PagePadding = new System.Windows.Thickness(35);
-                    doc.ColumnWidth = 724;
+                var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+                var headers = new[] { "Return #", "Date", "Customer", "Total Amount (PKR)", "Status" };
+                var rows = SaleReturns.Select(ret => new[] {
+                    ret.InvoiceNumber ?? "",
+                    ret.Date.ToString("dd/MM/yyyy"),
+                    ret.CustomerName ?? "",
+                    $"{ret.TotalAmount:N0}",
+                    ret.Status ?? "Posted"
+                });
+                var totals = new[] { "TOTAL SALE RETURNS", $"{SaleReturns.Count} Returns", "", $"{GrandTotalReturns:N0}", "" };
+                _printService.PrintReportTable("Sale Returns Register", headers, rows, totals, company);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show("Printing error: " + ex.Message, "Print Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
 
-                    var pHeader = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("AL MADINA BUILDING MATERIAL ERP"))
-                    {
-                        FontSize = 18,
-                        FontWeight = System.Windows.FontWeights.Bold,
-                        Foreground = System.Windows.Media.Brushes.Maroon,
-                        TextAlignment = System.Windows.TextAlignment.Center,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 4)
-                    };
-                    doc.Blocks.Add(pHeader);
-
-                    var pSub = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("SALE RETURNS REGISTER"))
-                    {
-                        FontSize = 13,
-                        FontWeight = System.Windows.FontWeights.Bold,
-                        Foreground = System.Windows.Media.Brushes.DarkSlateGray,
-                        TextAlignment = System.Windows.TextAlignment.Center,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 10)
-                    };
-                    doc.Blocks.Add(pSub);
-
-                    var pDate = new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"Date: {DateTime.Now:dd/MM/yyyy HH:mm}   |   Total Returns: {SaleReturns.Count}"))
-                    {
-                        FontSize = 10,
-                        Foreground = System.Windows.Media.Brushes.Gray,
-                        TextAlignment = System.Windows.TextAlignment.Right,
-                        Margin = new System.Windows.Thickness(0, 0, 0, 14)
-                    };
-                    doc.Blocks.Add(pDate);
-
-                    var table = new System.Windows.Documents.Table();
-                    table.CellSpacing = 0;
-                    table.BorderThickness = new System.Windows.Thickness(1);
-                    table.BorderBrush = System.Windows.Media.Brushes.LightGray;
-
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(110) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(90) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(190) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(120) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(130) });
-                    table.Columns.Add(new System.Windows.Documents.TableColumn { Width = new System.Windows.GridLength(84) });
-
-                    var rowGroup = new System.Windows.Documents.TableRowGroup();
-
-                    var headerRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.Maroon };
-                    string[] headers = { "RETURN #", "DATE", "CUSTOMER", "AGAINST INV #", "RETURN AMOUNT", "STATUS" };
-                    foreach (var h in headers)
-                    {
-                        var cell = new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(h))
-                        {
-                            FontWeight = System.Windows.FontWeights.Bold,
-                            Foreground = System.Windows.Media.Brushes.White,
-                            FontSize = 9,
-                            Margin = new System.Windows.Thickness(4)
-                        });
-                        headerRow.Cells.Add(cell);
-                    }
-                    rowGroup.Rows.Add(headerRow);
-
-                    int rowIdx = 0;
-                    foreach (var ret in SaleReturns)
-                    {
-                        var bg = (rowIdx % 2 == 1) ? System.Windows.Media.Brushes.WhiteSmoke : System.Windows.Media.Brushes.White;
-                        var r = new System.Windows.Documents.TableRow { Background = bg };
-
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(ret.InvoiceNumber ?? "")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(ret.Date.ToString("dd/MM/yyyy"))) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(ret.CustomerName ?? "")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(ret.AgainstInvoiceNo ?? "-")) { FontSize = 9, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{ret.TotalAmount:N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                        r.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(ret.Status ?? "Posted")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-
-                        rowGroup.Rows.Add(r);
-                        rowIdx++;
-                    }
-
-                    var totalRow = new System.Windows.Documents.TableRow { Background = System.Windows.Media.Brushes.LightYellow };
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("TOTAL")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{SaleReturns.Count} Returns")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("")) { FontSize = 9 }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("")) { FontSize = 9 }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run($"{GrandTotalReturns:N0}")) { FontSize = 9, FontWeight = System.Windows.FontWeights.Bold, Foreground = System.Windows.Media.Brushes.Red, Margin = new System.Windows.Thickness(4) }));
-                    totalRow.Cells.Add(new System.Windows.Documents.TableCell(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run("")) { FontSize = 9 }));
-                    rowGroup.Rows.Add(totalRow);
-
-                    table.RowGroups.Add(rowGroup);
-                    doc.Blocks.Add(table);
-
-                    var paginator = ((System.Windows.Documents.IDocumentPaginatorSource)doc).DocumentPaginator;
-                    printDialog.PrintDocument(paginator, "Sale Returns Register");
-                }
+        [RelayCommand]
+        public async Task PrintPosListAsync()
+        {
+            try
+            {
+                var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+                var headers = new[] { "Receipt #", "Date & Time", "Customer", "Payment Mode", "Total Amount (PKR)", "Status" };
+                var rows = PosSales.Select(p => new[] {
+                    p.InvoiceNumber ?? "",
+                    p.Date.ToString("yyyy-MM-dd HH:mm"),
+                    p.CustomerName ?? "WALK-IN CUSTOMER",
+                    p.PaymentTerms ?? "Cash",
+                    $"{p.TotalAmount:N0}",
+                    p.Status ?? "Posted"
+                });
+                var totals = new[] { "TOTAL POS COUNTER SALES", $"{PosSales.Count} Receipts", "", "", $"{GrandTotalPosSales:N0}", "" };
+                _printService.PrintReportTable("POS Counter Sales Register", headers, rows, totals, company);
             }
             catch (Exception ex)
             {

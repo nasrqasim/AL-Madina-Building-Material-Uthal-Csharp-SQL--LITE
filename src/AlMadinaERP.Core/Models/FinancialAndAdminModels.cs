@@ -21,6 +21,9 @@ namespace AlMadinaERP.Core.Models
         public int? VendorId { get; set; }
         public Vendor? Vendor { get; set; }
         public string VendorName { get; set; } = string.Empty;
+
+        [NotMapped]
+        public string PayerName => !string.IsNullOrWhiteSpace(CustomerName) ? CustomerName : (!string.IsNullOrWhiteSpace(VendorName) ? VendorName : "Cash Customer");
         
         public decimal Amount { get; set; }
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
@@ -56,7 +59,8 @@ namespace AlMadinaERP.Core.Models
         [NotMapped]
         public string VoucherNumber { get => PaymentNumber; set => PaymentNumber = value; }
         public DateTime Date { get; set; } = DateTime.Now;
-        public PaymentType PaymentType { get; set; } = PaymentType.CashPayment; // CashPayment, BankPayment
+        public PaymentType PaymentType { get; set; } = PaymentType.CashPayment; // CashPayment, BankPayment, ExpensePayment
+        
         public string PaymentCategory { get; set; } = "Party Payment"; // Party Payment, Petty Payment
         
         public string PayToCategory { get; set; } = "Vendor"; // Customer, Vendor
@@ -69,7 +73,23 @@ namespace AlMadinaERP.Core.Models
         public string CustomerName { get; set; } = string.Empty;
 
         [NotMapped]
-        public string PartyName => PayToCategory == "Customer" ? CustomerName : VendorName;
+        public string PartyName
+        {
+            get
+            {
+                if (string.Equals(PayToCategory, "Customer", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrWhiteSpace(CustomerName)) return CustomerName;
+                    if (!string.IsNullOrWhiteSpace(VendorName)) return VendorName;
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(VendorName)) return VendorName;
+                    if (!string.IsNullOrWhiteSpace(CustomerName)) return CustomerName;
+                }
+                return "General Party";
+            }
+        }
         
         private decimal _amount;
         public decimal Amount

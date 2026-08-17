@@ -69,11 +69,13 @@ namespace AlMadinaERP.Services
 
             if (!string.IsNullOrWhiteSpace(query))
             {
-                query = query.ToLower();
-                q = q.Where(s => s.FullName.ToLower().Contains(query) ||
-                                 s.StaffCode.ToLower().Contains(query) ||
-                                 s.Designation.ToLower().Contains(query) ||
-                                 s.Department.ToLower().Contains(query));
+                var term = query.Trim().ToLower();
+                q = q.Where(s => (s.FullName != null && s.FullName.ToLower().Contains(term)) ||
+                                 (s.StaffCode != null && s.StaffCode.ToLower().Contains(term)) ||
+                                 (s.Designation != null && s.Designation.ToLower().Contains(term)) ||
+                                 (s.Department != null && s.Department.ToLower().Contains(term)) ||
+                                 (s.Phone != null && s.Phone.ToLower().Contains(term)) ||
+                                 (s.CNIC != null && s.CNIC.ToLower().Contains(term)));
             }
 
             return await q.OrderBy(s => s.FullName).AsNoTracking().ToListAsync();

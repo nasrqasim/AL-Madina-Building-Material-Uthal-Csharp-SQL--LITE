@@ -611,7 +611,7 @@
                         <TextBlock Text="Fast retail checkout for walk-in customers." Foreground="#64748B" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
+                        <Button Command="{Binding PrintPosListCommand}" Content="🖨️ Print" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold" Cursor="Hand"/>
                         <Button Content="📊 Export Excel" Visibility="Collapsed" Background="#FFFFFF" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10,6" Margin="3" FontSize="11" FontWeight="SemiBold"/>
                         <Button Command="{Binding OpenNewPosTerminalCommand}" Content="+ NEW SALE" Background="#059669" Foreground="#FFFFFF" FontWeight="Bold" Padding="14,6" Margin="3" FontSize="12" Cursor="Hand"/>
                     </StackPanel>

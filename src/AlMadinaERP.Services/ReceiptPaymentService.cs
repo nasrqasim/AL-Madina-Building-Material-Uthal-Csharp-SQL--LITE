@@ -288,7 +288,15 @@ namespace AlMadinaERP.Services
             if (toDate.HasValue)
                 q = q.Where(r => r.Date <= toDate.Value);
 
-            return await q.OrderByDescending(r => r.Date).ToListAsync();
+            var receipts = await q.OrderByDescending(r => r.Date).ToListAsync();
+            foreach (var r in receipts)
+            {
+                if (string.IsNullOrWhiteSpace(r.CustomerName) && r.Customer != null)
+                    r.CustomerName = r.Customer.Name;
+                if (string.IsNullOrWhiteSpace(r.VendorName) && r.Vendor != null)
+                    r.VendorName = r.Vendor.Name;
+            }
+            return receipts;
         }
 
         public async Task<List<Payment>> SearchPaymentsAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
@@ -311,7 +319,15 @@ namespace AlMadinaERP.Services
             if (toDate.HasValue)
                 q = q.Where(p => p.Date <= toDate.Value);
 
-            return await q.OrderByDescending(p => p.Date).ToListAsync();
+            var payments = await q.OrderByDescending(p => p.Date).ToListAsync();
+            foreach (var p in payments)
+            {
+                if (string.IsNullOrWhiteSpace(p.CustomerName) && p.Customer != null)
+                    p.CustomerName = p.Customer.Name;
+                if (string.IsNullOrWhiteSpace(p.VendorName) && p.Vendor != null)
+                    p.VendorName = p.Vendor.Name;
+            }
+            return payments;
         }
 
         public async Task DeleteReceiptAsync(int id)
