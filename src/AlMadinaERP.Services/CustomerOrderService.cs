@@ -7,19 +7,25 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class CustomerOrderService : ICustomerOrderService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public CustomerOrderService(AppDbContext context)
+        public CustomerOrderService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<List<CustomerOrder>> GetCustomerOrdersAsync(string searchQuery = "", string statusFilter = "All")
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             var query = _context.CustomerOrders
                 .Include(o => o.Items)
                 .AsNoTracking()
@@ -34,7 +40,6 @@ namespace AlMadinaERP.Services
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var q = searchQuery.Trim().ToLower();
-
                 bool isNumeric = int.TryParse(q, out int serialNo);
 
                 query = query.Where(o =>
@@ -52,6 +57,8 @@ namespace AlMadinaERP.Services
 
         public async Task<CustomerOrder?> GetCustomerOrderByIdAsync(int id)
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             return await _context.CustomerOrders
                 .Include(o => o.Items)
                 .AsNoTracking()
@@ -60,6 +67,7 @@ namespace AlMadinaERP.Services
 
         public async Task<string> GenerateNextOrderNumberAsync()
         {
+            using var _context = CreateContext();
             var existingNumbers = await _context.CustomerOrders
                 .AsNoTracking()
                 .Select(o => o.OrderNumber)
@@ -84,99 +92,137 @@ namespace AlMadinaERP.Services
         {
             if (order == null) throw new ArgumentNullException(nameof(order));
 
-            // Clean line items and calculate totals safely
-            order.CustomerName ??= string.Empty;
-            order.Address ??= string.Empty;
-            order.ContactNumber ??= string.Empty;
-            order.Status = string.IsNullOrWhiteSpace(order.Status) ? "Pending" : order.Status;
-
-            decimal totalAmount = 0m;
-            if (order.Items != null)
+            using var _context = CreateContext();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                foreach (var item in order.Items)
+                order.CustomerName ??= string.Empty;
+                order.Address ??= string.Empty;
+                order.ContactNumber ??= string.Empty;
+                order.Status = string.IsNullOrWhiteSpace(order.Status) ? "Pending" : order.Status;
+
+                decimal totalAmount = 0m;
+                if (order.Items != null)
                 {
-                    item.ItemNameSnapshot ??= string.Empty;
-                    item.ItemCode ??= string.Empty;
-                    item.Unit ??= string.Empty;
-                    if (item.Quantity < 0) item.Quantity = 0;
-                    if (item.Rate < 0) item.Rate = 0;
-                    item.LineTotal = item.Quantity * item.Rate;
-                    totalAmount += item.LineTotal;
-                }
-            }
-
-            order.TotalAmount = totalAmount;
-            order.UpdatedAt = DateTime.Now;
-
-            if (order.Id == 0)
-            {
-                if (string.IsNullOrWhiteSpace(order.OrderNumber))
-                {
-                    order.OrderNumber = await GenerateNextOrderNumberAsync();
-                }
-                order.CreatedAt = DateTime.Now;
-                _context.CustomerOrders.Add(order);
-            }
-            else
-            {
-                var existingOrder = await _context.CustomerOrders
-                    .Include(o => o.Items)
-                    .FirstOrDefaultAsync(o => o.Id == order.Id);
-
-                if (existingOrder != null)
-                {
-                    existingOrder.OrderNumber = order.OrderNumber;
-                    existingOrder.CustomerName = order.CustomerName;
-                    existingOrder.Address = order.Address;
-                    existingOrder.ContactNumber = order.ContactNumber;
-                    existingOrder.OrderDate = order.OrderDate;
-                    existingOrder.ReceivingDate = order.ReceivingDate;
-                    existingOrder.Status = order.Status;
-                    existingOrder.TotalAmount = order.TotalAmount;
-                    existingOrder.UpdatedAt = DateTime.Now;
-
-                    _context.CustomerOrderItems.RemoveRange(existingOrder.Items);
-
-                    existingOrder.Items = new System.Collections.ObjectModel.ObservableCollection<CustomerOrderItem>();
-                    if (order.Items != null)
+                    foreach (var item in order.Items)
                     {
-                        foreach (var item in order.Items)
+                        item.ItemNameSnapshot ??= string.Empty;
+                        item.ItemCode ??= string.Empty;
+                        item.Unit ??= string.Empty;
+                        if (item.Quantity < 0) item.Quantity = 0;
+                        if (item.Rate < 0) item.Rate = 0;
+                        item.Recalculate();
+                        totalAmount += item.LineTotal;
+                    }
+                }
+
+                order.TotalAmount = totalAmount;
+                order.UpdatedAt = DateTime.Now;
+
+                if (order.Id == 0)
+                {
+                    if (string.IsNullOrWhiteSpace(order.OrderNumber))
+                    {
+                        order.OrderNumber = await GenerateNextOrderNumberAsync();
+                    }
+                    order.CreatedAt = DateTime.Now;
+                    await _context.CustomerOrders.AddAsync(order);
+                }
+                else
+                {
+                    var existingOrder = await _context.CustomerOrders
+                        .Include(o => o.Items)
+                        .FirstOrDefaultAsync(o => o.Id == order.Id);
+
+                    if (existingOrder != null)
+                    {
+                        existingOrder.OrderNumber = order.OrderNumber;
+                        existingOrder.CustomerName = order.CustomerName;
+                        existingOrder.Address = order.Address;
+                        existingOrder.ContactNumber = order.ContactNumber;
+                        existingOrder.OrderDate = order.OrderDate;
+                        existingOrder.ReceivingDate = order.ReceivingDate;
+                        existingOrder.Status = order.Status;
+                        existingOrder.TotalAmount = order.TotalAmount;
+                        existingOrder.PaidAmount = order.PaidAmount;
+                        existingOrder.UpdatedAt = DateTime.Now;
+
+                        _context.CustomerOrderItems.RemoveRange(existingOrder.Items);
+
+                        existingOrder.Items = new System.Collections.ObjectModel.ObservableCollection<CustomerOrderItem>();
+                        if (order.Items != null)
                         {
-                            item.Id = 0; // Reset Id for new insertion
-                            item.CustomerOrderId = existingOrder.Id;
-                            existingOrder.Items.Add(item);
+                            foreach (var item in order.Items)
+                            {
+                                item.Id = 0;
+                                item.CustomerOrderId = existingOrder.Id;
+                                existingOrder.Items.Add(item);
+                            }
                         }
                     }
                 }
-            }
 
-            await _context.SaveChangesAsync();
-            return order;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _context.ChangeTracker.Clear();
+                return order;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task DeleteCustomerOrderAsync(int id)
         {
-            var order = await _context.CustomerOrders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == id);
-
-            if (order != null)
+            using var _context = CreateContext();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                _context.CustomerOrders.Remove(order);
-                await _context.SaveChangesAsync();
+                var order = await _context.CustomerOrders
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
+                if (order != null)
+                {
+                    _context.CustomerOrders.Remove(order);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    _context.ChangeTracker.Clear();
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
         public async Task<CustomerOrder?> ToggleOrderStatusAsync(int id)
         {
+            using var _context = CreateContext();
             var order = await _context.CustomerOrders
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order != null)
             {
-                order.Status = order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "Pending" : "Completed";
+                bool isCompleted = order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase);
+                if (isCompleted)
+                {
+                    order.Status = "Pending";
+                }
+                else
+                {
+                    order.Status = "Completed";
+                    if (order.PaidAmount < order.TotalAmount)
+                    {
+                        order.PaidAmount = order.TotalAmount;
+                    }
+                }
                 order.UpdatedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
+                _context.ChangeTracker.Clear();
             }
 
             return order;

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AlMadinaERP.Core\AlMadinaERP.Core.csproj" />
+    <ProjectReference Include="..\..\src\AlMadinaERP.Data\AlMadinaERP.Data.csproj" />
+    <ProjectReference Include="..\..\src\AlMadinaERP.Services\AlMadinaERP.Services.csproj" />
+    <ProjectReference Include="..\..\src\AlMadinaERP.Wpf\AlMadinaERP.Wpf.csproj" />
+  </ItemGroup>
+</Project>

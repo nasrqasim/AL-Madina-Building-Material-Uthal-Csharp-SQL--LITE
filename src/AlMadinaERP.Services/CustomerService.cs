@@ -8,19 +8,24 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class CustomerService : ICustomerService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public CustomerService(AppDbContext context)
+        public CustomerService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<string> GetNextCustomerCodeAsync()
         {
+            using var _context = CreateContext();
             var lastCode = await _context.Customers
                 .AsNoTracking()
                 .Where(c => c.Code.StartsWith("CUST-"))
@@ -39,6 +44,7 @@ namespace AlMadinaERP.Services
 
         private async Task EnsureCustomerCodesAsync()
         {
+            using var _context = CreateContext();
             var unassigned = await _context.Customers
                 .Where(c => string.IsNullOrEmpty(c.Code))
                 .OrderBy(c => c.Id)
@@ -72,6 +78,7 @@ namespace AlMadinaERP.Services
         public async Task<List<Customer>> SearchCustomersAsync(string query)
         {
             await EnsureCustomerCodesAsync();
+            using var _context = CreateContext();
 
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -94,11 +101,13 @@ namespace AlMadinaERP.Services
 
         public async Task<Customer?> GetCustomerByIdAsync(int id)
         {
+            using var _context = CreateContext();
             return await _context.Customers.FindAsync(id);
         }
 
         public async Task<Customer> SaveCustomerAsync(Customer customer)
         {
+            using var _context = CreateContext();
             if (customer.Id == 0)
             {
                 if (string.IsNullOrWhiteSpace(customer.Code))
@@ -119,6 +128,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteCustomerAsync(int id)
         {
+            using var _context = CreateContext();
             var cust = await _context.Customers.FindAsync(id);
             if (cust != null)
             {
@@ -130,6 +140,7 @@ namespace AlMadinaERP.Services
         public async Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync(string query = "")
         {
             await EnsureCustomerCodesAsync();
+            using var _context = CreateContext();
 
             var q = query.Trim().ToLower();
             var customers = _context.Customers.Where(c => c.IsActive);
@@ -157,6 +168,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<CustomerLedger>> GetCustomerLedgerAsync(int customerId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var query = _context.CustomerLedgers
                 .Include(cl => cl.SaleInvoice!)
                 .ThenInclude(s => s.Items)
@@ -177,6 +189,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<CustomerPurchasedItemDto>> GetCustomerPurchasedItemsAsync(int customerId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var query = _context.SaleInvoices.Where(s => s.CustomerId == customerId);
 
             if (fromDate.HasValue) query = query.Where(s => s.Date >= fromDate.Value);
@@ -215,6 +228,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<PaymentHistoryDto>> GetCustomerReceiptsAndPaymentsAsync(int customerId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var receipts = await _context.Receipts
                 .Where(r => r.CustomerId == customerId && r.Status == "Posted")
                 .OrderByDescending(r => r.Date)
@@ -238,6 +252,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<OutstandingInvoiceDto>> GetCustomerOutstandingInvoicesAsync(int customerId)
         {
+            using var _context = CreateContext();
             var invoices = await _context.SaleInvoices
                 .Where(s => s.CustomerId == customerId && (s.TotalAmount - s.PaidAmount - s.AdvanceUsed) > 0)
                 .OrderByDescending(s => s.Date)

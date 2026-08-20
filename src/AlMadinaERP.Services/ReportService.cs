@@ -8,19 +8,24 @@ using AlMadinaERP.Core.Enums;
 using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class ReportService : IReportService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public ReportService(AppDbContext context)
+        public ReportService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<ProfitLossReportDto> GetProfitLossReportAsync(DateTime startDate, DateTime endDate)
         {
+            using var _context = CreateContext();
             var salesQuery = _context.SaleInvoices.Where(s => s.Date >= startDate && s.Date <= endDate);
 
             var grossSales = (decimal)(await salesQuery
@@ -64,6 +69,7 @@ namespace AlMadinaERP.Services
 
         public async Task<BalanceSheetReportDto> GetBalanceSheetReportAsync(DateTime asOfDate)
         {
+            using var _context = CreateContext();
             var bankBalances = (decimal)(await _context.Banks
                 .Where(b => b.IsActive)
                 .SumAsync(b => (double?)b.CurrentBalance) ?? 0);
@@ -99,6 +105,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<ItemProfitLossDto>> GetItemWiseProfitLossAsync(DateTime startDate, DateTime endDate)
         {
+            using var _context = CreateContext();
             var items = await _context.SaleInvoiceItems
                 .Include(si => si.SaleInvoice)
                 .Include(si => si.Item)

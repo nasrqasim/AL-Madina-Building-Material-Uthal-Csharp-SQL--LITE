@@ -79,24 +79,39 @@ namespace AlMadinaERP.Wpf.ViewModels
         private List<Item> _allMasterItems = new();
         private System.Threading.CancellationTokenSource? _salesSearchCts;
 
+        public void CancelPendingSearch()
+        {
+            _salesSearchCts?.Cancel();
+            _salesSearchCts?.Dispose();
+            _salesSearchCts = null;
+        }
+
         partial void OnSearchQueryChanged(string value)
         {
             FilterPosItems(value);
 
-            _salesSearchCts?.Cancel();
+            CancelPendingSearch();
             _salesSearchCts = new System.Threading.CancellationTokenSource();
             var token = _salesSearchCts.Token;
 
-            Task.Delay(250, token).ContinueWith(t =>
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            Task.Run(async () =>
             {
-                if (!t.IsCanceled)
+                try
                 {
-                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    await Task.Delay(250, token);
+                    if (!token.IsCancellationRequested && dispatcher != null)
                     {
-                        await LoadInvoicesAsync();
-                    });
+                        await dispatcher.InvokeAsync(async () =>
+                        {
+                            if (!token.IsCancellationRequested)
+                                await LoadInvoicesAsync();
+                        });
+                    }
                 }
-            }, TaskScheduler.Default);
+                catch (TaskCanceledException) { }
+                catch (Exception) { }
+            }, token);
         }
         partial void OnFromDateChanged(DateTime? value) => _ = LoadInvoicesAsync();
         partial void OnToDateChanged(DateTime? value) => _ = LoadInvoicesAsync();
@@ -163,12 +178,53 @@ namespace AlMadinaERP.Wpf.ViewModels
             ResetNewInvoice();
         }
 
+        private bool _isRefreshingCustomers = false;
+
+        private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SaleInvoiceItem.Quantity) ||
+                e.PropertyName == nameof(SaleInvoiceItem.Rate) ||
+                e.PropertyName == nameof(SaleInvoiceItem.LengthFeet) ||
+                e.PropertyName == nameof(SaleInvoiceItem.RatePerFoot) ||
+                e.PropertyName == nameof(SaleInvoiceItem.DiscountPercent) ||
+                e.PropertyName == nameof(SaleInvoiceItem.Item) ||
+                e.PropertyName == nameof(SaleInvoiceItem.TotalPrice))
+            {
+                RecalculateTotals();
+            }
+        }
+
+        private void SubscribeItemEvents(SaleInvoiceItem? item)
+        {
+            if (item == null) return;
+            item.PropertyChanged -= OnItemPropertyChanged;
+            item.PropertyChanged += OnItemPropertyChanged;
+        }
+
+        private void UnsubscribeItemEvents(SaleInvoiceItem? item)
+        {
+            if (item == null) return;
+            item.PropertyChanged -= OnItemPropertyChanged;
+        }
+
+        private void UnsubscribeAllItemEvents(SaleInvoice? invoice)
+        {
+            if (invoice?.Items != null)
+            {
+                foreach (var item in invoice.Items)
+                {
+                    UnsubscribeItemEvents(item);
+                }
+            }
+        }
+
         private void ResetNewInvoice()
         {
+            UnsubscribeAllItemEvents(NewInvoice);
+
             var prefix = IsReturnMode ? "SR-" :
                          ActiveSubView == SalesActiveSubView.PosTerminal ? "POS-" : "SI-";
 
-            SelectedCustomer = null;
             NewInvoice = new SaleInvoice
             {
                 InvoiceNumber = prefix + DateTime.Now.ToString("fffSSm"),
@@ -182,6 +238,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                 Location = "Main Warehouse",
                 Employee = "System Admin"
             };
+            SelectedCustomer = null;
             AddEmptyLineItem();
         }
 
@@ -210,55 +267,73 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task LoadInvoicesAsync()
         {
-            var toDateEnd = ToDate.HasValue ? ToDate.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
-            var list = await _saleService.SearchInvoicesAsync(SearchQuery, FromDate, toDateEnd);
-
-            // Apply status filter in-memory
-            if (!string.IsNullOrEmpty(StatusFilter) && StatusFilter != "All")
-                list = list.Where(i => i.Status == StatusFilter).ToList();
-
-            var invoices = list.Where(i => i.Type == InvoiceType.SaleInvoice).ToList();
-            var returns = list.Where(i => i.Type == InvoiceType.SaleReturn).ToList();
-            var posList = list.Where(i => i.Type == InvoiceType.POSCounterSale).ToList();
-
-            Invoices = new ObservableCollection<SaleInvoice>(invoices);
-            SaleReturns = new ObservableCollection<SaleInvoice>(returns);
-            PosSales = new ObservableCollection<SaleInvoice>(posList);
-
-            TotalInvoicesCount = invoices.Count;
-            PostedCount = invoices.Count(i => i.Status == "Posted");
-            FullyPaidCount = invoices.Count(i => i.PaidAmount >= i.TotalAmount && i.TotalAmount > 0);
-            DraftsCount = invoices.Count(i => i.Status == "Draft");
-
-            TotalReturnsCount = returns.Count;
-            PostedReturnsCount = returns.Count(r => r.Status == "Posted");
-            DraftReturnsCount = returns.Count(r => r.Status == "Draft");
-
-            TodayPosSalesCount = posList.Count;
-            TotalPosCash = posList.Sum(p => p.TotalAmount);
-            CompletedPosCount = posList.Count(p => p.Status == "Completed" || p.Status == "Posted");
-            DraftPosCount = posList.Count(p => p.Status == "Draft");
-
-            // Grand totals for footer bars
-            GrandTotalSales = invoices.Sum(i => i.TotalAmount);
-            GrandTotalReturns = returns.Sum(r => r.TotalAmount);
-            GrandTotalPosSales = posList.Sum(p => p.TotalAmount);
-
-            if (Customers.Count == 0)
+            try
             {
-                var custs = await _customerService.SearchCustomersAsync("");
-                Customers = new ObservableCollection<Customer>(custs);
+                var toDateEnd = ToDate.HasValue ? ToDate.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
+                var list = await _saleService.SearchInvoicesAsync(SearchQuery, FromDate, toDateEnd);
+
+                // Apply status filter in-memory
+                if (!string.IsNullOrEmpty(StatusFilter) && StatusFilter != "All")
+                    list = list.Where(i => i.Status == StatusFilter).ToList();
+
+                var invoices = list.Where(i => i.Type == InvoiceType.SaleInvoice).ToList();
+                var returns = list.Where(i => i.Type == InvoiceType.SaleReturn).ToList();
+                var posList = list.Where(i => i.Type == InvoiceType.POSCounterSale).ToList();
+
+                Invoices = new ObservableCollection<SaleInvoice>(invoices);
+                SaleReturns = new ObservableCollection<SaleInvoice>(returns);
+                PosSales = new ObservableCollection<SaleInvoice>(posList);
+
+                TotalInvoicesCount = invoices.Count;
+                PostedCount = invoices.Count(i => i.Status == "Posted");
+                FullyPaidCount = invoices.Count(i => i.PaidAmount >= i.TotalAmount && i.TotalAmount > 0);
+                DraftsCount = invoices.Count(i => i.Status == "Draft");
+
+                TotalReturnsCount = returns.Count;
+                PostedReturnsCount = returns.Count(r => r.Status == "Posted");
+                DraftReturnsCount = returns.Count(r => r.Status == "Draft");
+
+                TodayPosSalesCount = posList.Count;
+                TotalPosCash = posList.Sum(p => p.TotalAmount);
+                CompletedPosCount = posList.Count(p => p.Status == "Completed" || p.Status == "Posted");
+                DraftPosCount = posList.Count(p => p.Status == "Draft");
+
+                // Grand totals for footer bars
+                GrandTotalSales = invoices.Sum(i => i.TotalAmount);
+                GrandTotalReturns = returns.Sum(r => r.TotalAmount);
+                GrandTotalPosSales = posList.Sum(p => p.TotalAmount);
+
+                _isRefreshingCustomers = true;
+                try
+                {
+                    var custs = await _customerService.SearchCustomersAsync("");
+                    var selId = SelectedCustomer?.Id ?? NewInvoice?.CustomerId;
+                    Customers = new ObservableCollection<Customer>(custs);
+                    if (selId.HasValue && selId.Value > 0)
+                        SelectedCustomer = Customers.FirstOrDefault(c => c.Id == selId.Value);
+                }
+                finally
+                {
+                    _isRefreshingCustomers = false;
+                }
+
+                if (_allMasterItems == null || _allMasterItems.Count == 0)
+                {
+                    _allMasterItems = await _inventoryService.SearchItemsAsync("");
+                    FilterPosItems(SearchQuery);
+                }
+
+                EditInvoiceCommand.NotifyCanExecuteChanged();
             }
-
-            if (_allMasterItems == null || _allMasterItems.Count == 0)
+            catch (Exception ex)
             {
-                _allMasterItems = await _inventoryService.SearchItemsAsync("");
-                FilterPosItems(SearchQuery);
+                System.Diagnostics.Debug.WriteLine($"[SalesViewModel] LoadInvoicesAsync error: {ex.Message}");
             }
         }
 
         partial void OnSelectedCustomerChanged(Customer? value)
         {
+            if (_isRefreshingCustomers) return;
             if (NewInvoice != null)
             {
                 if (value != null)
@@ -267,7 +342,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                     NewInvoice.CustomerId = value.Id;
                     NewInvoice.CustomerName = value.Name;
                 }
-                else
+                else if (NewInvoice.Id == 0)
                 {
                     NewInvoice.IsCashSale = true;
                     NewInvoice.CustomerId = null;
@@ -300,16 +375,21 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         private async Task EnsureItemsLoadedAsync()
         {
-            if (_allMasterItems == null || _allMasterItems.Count == 0)
-            {
-                _allMasterItems = await _inventoryService.SearchItemsAsync("");
-            }
+            _allMasterItems = await _inventoryService.SearchItemsAsync("");
             FilterPosItems(SearchQuery);
 
-            if (Customers.Count == 0)
+            _isRefreshingCustomers = true;
+            try
             {
                 var custs = await _customerService.SearchCustomersAsync("");
-                foreach (var c in custs) Customers.Add(c);
+                var selId = SelectedCustomer?.Id ?? NewInvoice?.CustomerId;
+                Customers = new ObservableCollection<Customer>(custs);
+                if (selId.HasValue && selId.Value > 0)
+                    SelectedCustomer = Customers.FirstOrDefault(c => c.Id == selId.Value);
+            }
+            finally
+            {
+                _isRefreshingCustomers = false;
             }
         }
 
@@ -370,19 +450,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                 TotalPrice = 0
             };
 
-            newItem.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(SaleInvoiceItem.Quantity) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.Rate) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.LengthFeet) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.RatePerFoot) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.DiscountPercent) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.Item) ||
-                    e.PropertyName == nameof(SaleInvoiceItem.TotalPrice))
-                {
-                    RecalculateTotals();
-                }
-            };
+            SubscribeItemEvents(newItem);
 
             var app = System.Windows.Application.Current;
             if (app != null && app.Dispatcher != null && !app.Dispatcher.CheckAccess())
@@ -405,11 +473,14 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (parameter is SaleInvoiceItem item && NewInvoice.Items.Contains(item))
             {
+                UnsubscribeItemEvents(item);
                 NewInvoice.Items.Remove(item);
                 RecalculateTotals();
             }
             else if (NewInvoice.Items.Count > 0)
             {
+                var lastItem = NewInvoice.Items[NewInvoice.Items.Count - 1];
+                UnsubscribeItemEvents(lastItem);
                 NewInvoice.Items.RemoveAt(NewInvoice.Items.Count - 1);
                 RecalculateTotals();
             }
@@ -458,6 +529,15 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         private async Task SaveInternalAsync()
         {
+            var app = System.Windows.Application.Current;
+            if (app != null && app.Dispatcher != null)
+            {
+                if (!app.Dispatcher.CheckAccess())
+                    app.Dispatcher.Invoke(() => System.Windows.Input.Keyboard.ClearFocus());
+                else
+                    System.Windows.Input.Keyboard.ClearFocus();
+            }
+
             if (ActiveSubView == SalesActiveSubView.SaleReturnForm)
                 NewInvoice.Type = InvoiceType.SaleReturn;
             else if (ActiveSubView == SalesActiveSubView.PosTerminal)
@@ -491,11 +571,24 @@ namespace AlMadinaERP.Wpf.ViewModels
             var validItems = NewInvoice.Items.Where(i => i.ItemId > 0 && i.Quantity > 0).ToList();
             if (validItems.Count == 0)
             {
-                System.Windows.MessageBox.Show(
-                    "Please select at least one item from the list before saving.",
-                    "No Items Selected",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                var owner = System.Windows.Application.Current?.MainWindow;
+                if (owner != null)
+                {
+                    System.Windows.MessageBox.Show(
+                        owner,
+                        "Please select at least one item from the list before saving.",
+                        "No Items Selected",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        "Please select at least one item from the list before saving.",
+                        "No Items Selected",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                }
                 return;
             }
 
@@ -507,13 +600,55 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewInvoice.CustomerName = SelectedCustomer.Name;
             }
 
-            var savedInvoice = await _saleService.SaveSaleInvoiceAsync(NewInvoice);
+            SaleInvoice savedInvoice;
+            try
+            {
+                savedInvoice = await _saleService.SaveSaleInvoiceAsync(NewInvoice);
+            }
+            catch (Exception ex)
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                if (owner != null)
+                {
+                    System.Windows.MessageBox.Show(
+                        owner,
+                        $"Failed to save sale invoice: {ex.Message}",
+                        "Save Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Failed to save sale invoice: {ex.Message}",
+                        "Save Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                return;
+            }
 
-            var confirmPrint = System.Windows.MessageBox.Show(
-                "Sale Invoice saved successfully! Do you want to print receipt?",
-                "Print Receipt",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
+            CloseSubView();
+
+            var printOwner = System.Windows.Application.Current?.MainWindow;
+            System.Windows.MessageBoxResult confirmPrint;
+            if (printOwner != null)
+            {
+                confirmPrint = System.Windows.MessageBox.Show(
+                    printOwner,
+                    "Sale Invoice saved successfully! Do you want to print receipt?",
+                    "Print Receipt",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+            }
+            else
+            {
+                confirmPrint = System.Windows.MessageBox.Show(
+                    "Sale Invoice saved successfully! Do you want to print receipt?",
+                    "Print Receipt",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+            }
 
             if (confirmPrint == System.Windows.MessageBoxResult.Yes)
             {
@@ -521,8 +656,8 @@ namespace AlMadinaERP.Wpf.ViewModels
                 _printService.PrintThermalReceipt(savedInvoice, company);
             }
 
-            CloseSubView();
             await LoadInvoicesAsync();
+            ResetNewInvoice();
         }
 
         [RelayCommand]
@@ -613,7 +748,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                     TotalPrice = item.SalePrice,
                     IsReceived = true
                 };
-                lineItem.PropertyChanged += (s, e) => RecalculateTotals();
+                SubscribeItemEvents(lineItem);
                 NewInvoice.Items.Add(lineItem);
             }
             RecalculateTotals();
@@ -623,14 +758,24 @@ namespace AlMadinaERP.Wpf.ViewModels
         public async Task EditInvoiceAsync(SaleInvoice invoice)
         {
             if (invoice == null) return;
+            await EnsureItemsLoadedAsync();
+
             var fullInvoice = await _saleService.GetSaleInvoiceByIdAsync(invoice.Id);
             if (fullInvoice == null) return;
 
+            UnsubscribeAllItemEvents(NewInvoice);
+            fullInvoice.Items = fullInvoice.Items != null
+                ? new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>(fullInvoice.Items)
+                : new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>();
             NewInvoice = fullInvoice;
-            if (fullInvoice.CustomerId.HasValue && fullInvoice.CustomerId.Value > 0)
-                SelectedCustomer = Customers.FirstOrDefault(c => c.Id == fullInvoice.CustomerId.Value);
-            else if (!string.IsNullOrWhiteSpace(fullInvoice.CustomerName))
-                SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(fullInvoice.CustomerName, StringComparison.OrdinalIgnoreCase));
+
+            var targetCust = Customers.FirstOrDefault(c =>
+                (fullInvoice.CustomerId.HasValue && fullInvoice.CustomerId.Value > 0 && c.Id == fullInvoice.CustomerId.Value) ||
+                (!string.IsNullOrWhiteSpace(fullInvoice.CustomerName) && c.Name.Equals(fullInvoice.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+            SelectedCustomer = targetCust;
+            NewInvoice.CustomerId = fullInvoice.CustomerId;
+            NewInvoice.CustomerName = !string.IsNullOrWhiteSpace(fullInvoice.CustomerName) ? fullInvoice.CustomerName : (targetCust?.Name ?? "WALK-IN CUSTOMER");
 
             if (fullInvoice.Type == InvoiceType.SaleReturn)
             {
@@ -645,16 +790,25 @@ namespace AlMadinaERP.Wpf.ViewModels
 
             foreach (var item in NewInvoice.Items)
             {
-                item.PropertyChanged += (s, e) =>
+                var match = AvailableItems.FirstOrDefault(i =>
+                    (item.ItemId > 0 && i.Id == item.ItemId) ||
+                    (!string.IsNullOrWhiteSpace(item.ItemCode) && i.Code.Equals(item.ItemCode.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrWhiteSpace(item.ItemName) && i.Name.Equals(item.ItemName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+                if (match != null)
                 {
-                    if (e.PropertyName == nameof(SaleInvoiceItem.Quantity) ||
-                        e.PropertyName == nameof(SaleInvoiceItem.Rate) ||
-                        e.PropertyName == nameof(SaleInvoiceItem.DiscountPercent) ||
-                        e.PropertyName == nameof(SaleInvoiceItem.Item))
-                    {
-                        RecalculateTotals();
-                    }
-                };
+                    item.Item = match;
+                    item.ItemCode = match.Code;
+                    item.ItemName = match.Name;
+                }
+                else if (!string.IsNullOrWhiteSpace(item.ItemName))
+                {
+                    var fallback = new Item { Id = item.ItemId, Code = item.ItemCode ?? "ITM-001", Name = item.ItemName, SalePrice = item.Rate };
+                    AvailableItems.Add(fallback);
+                    item.Item = fallback;
+                }
+
+                SubscribeItemEvents(item);
             }
             RecalculateTotals();
         }

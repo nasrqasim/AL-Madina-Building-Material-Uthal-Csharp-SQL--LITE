@@ -4,8 +4,14 @@ using AlMadinaERP.Core.Enums;
 
 namespace AlMadinaERP.Core.Models
 {
-    public class Receipt
+    public class Receipt : System.ComponentModel.INotifyPropertyChanged
     {
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+        }
+
         public int Id { get; set; }
         public string ReceiptNumber { get; set; } = string.Empty;
         
@@ -14,13 +20,59 @@ namespace AlMadinaERP.Core.Models
         public DateTime Date { get; set; } = DateTime.Now;
         public ReceiptType ReceiptType { get; set; } = ReceiptType.CashReceipt; // CashReceipt, BankReceipt, OtherIncome
         
-        public int? CustomerId { get; set; }
+        private int? _customerId;
+        public int? CustomerId
+        {
+            get => _customerId;
+            set
+            {
+                if (_customerId == value) return;
+                _customerId = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PayerName));
+            }
+        }
         public Customer? Customer { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
+
+        private string _customerName = string.Empty;
+        public string CustomerName
+        {
+            get => _customerName;
+            set
+            {
+                if (_customerName == value) return;
+                _customerName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PayerName));
+            }
+        }
         
-        public int? VendorId { get; set; }
+        private int? _vendorId;
+        public int? VendorId
+        {
+            get => _vendorId;
+            set
+            {
+                if (_vendorId == value) return;
+                _vendorId = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PayerName));
+            }
+        }
         public Vendor? Vendor { get; set; }
-        public string VendorName { get; set; } = string.Empty;
+
+        private string _vendorName = string.Empty;
+        public string VendorName
+        {
+            get => _vendorName;
+            set
+            {
+                if (_vendorName == value) return;
+                _vendorName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PayerName));
+            }
+        }
 
         [NotMapped]
         public string PayerName => !string.IsNullOrWhiteSpace(CustomerName) ? CustomerName : (!string.IsNullOrWhiteSpace(VendorName) ? VendorName : "Cash Customer");
@@ -63,14 +115,72 @@ namespace AlMadinaERP.Core.Models
         
         public string PaymentCategory { get; set; } = "Party Payment"; // Party Payment, Petty Payment
         
-        public string PayToCategory { get; set; } = "Vendor"; // Customer, Vendor
-        public int? VendorId { get; set; }
+        private string _payToCategory = "Vendor";
+        public string PayToCategory
+        {
+            get => _payToCategory;
+            set
+            {
+                if (_payToCategory == value) return;
+                _payToCategory = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PartyName));
+            }
+        }
+
+        private int? _vendorId;
+        public int? VendorId
+        {
+            get => _vendorId;
+            set
+            {
+                if (_vendorId == value) return;
+                _vendorId = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PartyName));
+            }
+        }
         public Vendor? Vendor { get; set; }
-        public string VendorName { get; set; } = string.Empty;
+
+        private string _vendorName = string.Empty;
+        public string VendorName
+        {
+            get => _vendorName;
+            set
+            {
+                if (_vendorName == value) return;
+                _vendorName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PartyName));
+            }
+        }
         
-        public int? CustomerId { get; set; }
+        private int? _customerId;
+        public int? CustomerId
+        {
+            get => _customerId;
+            set
+            {
+                if (_customerId == value) return;
+                _customerId = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PartyName));
+            }
+        }
         public Customer? Customer { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
+
+        private string _customerName = string.Empty;
+        public string CustomerName
+        {
+            get => _customerName;
+            set
+            {
+                if (_customerName == value) return;
+                _customerName = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PartyName));
+            }
+        }
 
         [NotMapped]
         public string PartyName

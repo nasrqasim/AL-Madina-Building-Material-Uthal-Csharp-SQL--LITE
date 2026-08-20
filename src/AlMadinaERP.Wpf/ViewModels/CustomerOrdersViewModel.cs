@@ -15,6 +15,7 @@ namespace AlMadinaERP.Wpf.ViewModels
     {
         private readonly ICustomerOrderService _orderService;
         private readonly IInventoryService _inventoryService;
+        private readonly ICustomerService _customerService;
         private readonly IPrintService _printService;
         private readonly IRepository<CompanySetting> _companyRepo;
 
@@ -22,23 +23,13 @@ namespace AlMadinaERP.Wpf.ViewModels
         private ObservableCollection<CustomerOrder> _orders = new();
 
         [ObservableProperty]
+        private ObservableCollection<CustomerOrder> _filteredOrders = new();
+
+        [ObservableProperty]
         private ObservableCollection<Item> _masterItems = new();
 
         [ObservableProperty]
-        private Item? _selectedMasterItem;
-
-        partial void OnSelectedMasterItemChanged(Item? value)
-        {
-            if (value != null)
-            {
-                NewItemName = value.Name ?? string.Empty;
-                NewItemCode = value.Code ?? string.Empty;
-                NewItemUnit = !string.IsNullOrWhiteSpace(value.SaleUnitName) ? value.SaleUnitName : (!string.IsNullOrWhiteSpace(value.SellingUnit) ? value.SellingUnit : "Pcs");
-                NewItemRate = value.SellingPrice > 0 ? value.SellingPrice : (value.WholesalePrice > 0 ? value.WholesalePrice : 0m);
-                if (NewItemQuantity <= 0) NewItemQuantity = 1m;
-                CalculateLineTotal();
-            }
-        }
+        private ObservableCollection<Customer> _masterCustomers = new();
 
         [ObservableProperty]
         private CustomerOrder? _selectedOrder;
@@ -49,9 +40,58 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private ObservableCollection<CustomerOrderItem> _currentOrderItems = new();
 
+        // Search and Filters
+        [ObservableProperty]
+        private string _searchQuery = string.Empty;
+
+        [ObservableProperty]
+        private string _selectedStatusFilter = "All"; // All, Pending, Completed
+
+        // Summary Cards
+        [ObservableProperty]
+        private int _totalOrdersCount = 0;
+
+        [ObservableProperty]
+        private int _pendingOrdersCount = 0;
+
+        [ObservableProperty]
+        private int _completedOrdersCount = 0;
+
+        [ObservableProperty]
+        private decimal _totalOrdersAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _totalPaidAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _totalRemainingAmount = 0m;
+
+        // Modal States
+        [ObservableProperty]
+        private bool _isOrderModalOpen = false;
+
+        [ObservableProperty]
+        private bool _isViewModalOpen = false;
+
+        [ObservableProperty]
+        private string _modalTitle = "New Customer Order";
+
         // Form Fields
         [ObservableProperty]
         private string _formCustomerName = string.Empty;
+
+        [ObservableProperty]
+        private Customer? _formSelectedCustomer;
+
+        partial void OnFormSelectedCustomerChanged(Customer? value)
+        {
+            if (value != null)
+            {
+                FormCustomerName = value.Name;
+                FormAddress = value.Address ?? string.Empty;
+                FormContactNumber = value.Phone ?? string.Empty;
+            }
+        }
 
         [ObservableProperty]
         private string _formAddress = string.Empty;
@@ -63,12 +103,49 @@ namespace AlMadinaERP.Wpf.ViewModels
         private DateTime _formOrderDate = DateTime.Now;
 
         [ObservableProperty]
-        private DateTime? _formReceivingDate = DateTime.Now.AddDays(1);
+        private DateTime _formReceivingDate = DateTime.Now.AddDays(1);
 
         [ObservableProperty]
         private string _formStatus = "Pending";
 
-        // Order Item Line Fields
+        [ObservableProperty]
+        private decimal _formTotalAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _formPaidAmount = 0m;
+
+        partial void OnFormPaidAmountChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(FormRemainingAmount));
+        }
+
+        public decimal FormRemainingAmount => Math.Max(0m, FormTotalAmount - FormPaidAmount);
+
+        // Line Item Entry Fields
+        [ObservableProperty]
+        private Item? _selectedMasterItem;
+
+        partial void OnSelectedMasterItemChanged(Item? value)
+        {
+            if (value != null)
+            {
+                NewItemName = value.Name;
+                NewItemCode = value.Code;
+                NewItemUnit = !string.IsNullOrWhiteSpace(value.SaleUnitName) ? value.SaleUnitName : (value.SellingUnit ?? "Pcs");
+                NewItemRate = value.SalePrice > 0 ? value.SalePrice : value.PurchasePrice;
+                
+                var nameLower = value.Name.ToLower();
+                var unitLower = NewItemUnit.ToLower();
+                IsLengthInputVisible = nameLower.Contains("tear") || nameLower.Contains("girder") ||
+                                       unitLower.Contains("feet") || unitLower.Contains("foot");
+                if (IsLengthInputVisible && NewItemLengthFeet <= 0)
+                {
+                    NewItemLengthFeet = nameLower.Contains("tear") ? 20.0 : (nameLower.Contains("girder") ? 15.0 : 10.0);
+                }
+                RecalculateLineInputTotal();
+            }
+        }
+
         [ObservableProperty]
         private string _newItemName = string.Empty;
 
@@ -81,67 +158,46 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private decimal _newItemQuantity = 1m;
 
-        partial void OnNewItemQuantityChanged(decimal value) => CalculateLineTotal();
+        partial void OnNewItemQuantityChanged(decimal value) => RecalculateLineInputTotal();
+
+        [ObservableProperty]
+        private double _newItemLengthFeet = 0.0;
+
+        partial void OnNewItemLengthFeetChanged(double value) => RecalculateLineInputTotal();
 
         [ObservableProperty]
         private decimal _newItemRate = 0m;
 
-        partial void OnNewItemRateChanged(decimal value) => CalculateLineTotal();
+        partial void OnNewItemRateChanged(decimal value) => RecalculateLineInputTotal();
 
         [ObservableProperty]
         private decimal _newItemLineTotal = 0m;
 
-        private void CalculateLineTotal()
+        [ObservableProperty]
+        private bool _isLengthInputVisible = false;
+
+        private void RecalculateLineInputTotal()
         {
-            NewItemLineTotal = Math.Max(0m, NewItemQuantity) * Math.Max(0m, NewItemRate);
+            if (IsLengthInputVisible && NewItemLengthFeet > 0)
+            {
+                NewItemLineTotal = NewItemQuantity * (decimal)NewItemLengthFeet * NewItemRate;
+            }
+            else
+            {
+                NewItemLineTotal = NewItemQuantity * NewItemRate;
+            }
         }
-
-        [ObservableProperty]
-        private decimal _formTotalAmount = 0m;
-
-        // Modal visibility
-        [ObservableProperty]
-        private bool _isOrderModalOpen;
-
-        [ObservableProperty]
-        private bool _isViewModalOpen;
-
-        [ObservableProperty]
-        private string _modalTitle = "New Customer Order";
-
-        // Summary Calculations
-        [ObservableProperty]
-        private int _totalOrdersCount;
-
-        [ObservableProperty]
-        private int _pendingOrdersCount;
-
-        [ObservableProperty]
-        private int _completedOrdersCount;
-
-        [ObservableProperty]
-        private decimal _totalOrdersAmount;
-
-        // Filter and Search
-        [ObservableProperty]
-        private string _searchQuery = string.Empty;
-
-        partial void OnSearchQueryChanged(string value)
-        {
-            _ = LoadOrdersAsync();
-        }
-
-        [ObservableProperty]
-        private string _selectedStatusFilter = "All";
 
         public CustomerOrdersViewModel(
             ICustomerOrderService orderService,
             IInventoryService inventoryService,
+            ICustomerService customerService,
             IPrintService printService,
             IRepository<CompanySetting> companyRepo)
         {
             _orderService = orderService;
             _inventoryService = inventoryService;
+            _customerService = customerService;
             _printService = printService;
             _companyRepo = companyRepo;
         }
@@ -150,36 +206,31 @@ namespace AlMadinaERP.Wpf.ViewModels
         public async Task LoadOrdersAsync()
         {
             var list = await _orderService.GetCustomerOrdersAsync(SearchQuery, SelectedStatusFilter);
+            Orders = new ObservableCollection<CustomerOrder>(list);
+            FilteredOrders = Orders;
 
-            Orders.Clear();
-            foreach (var order in list)
-            {
-                Orders.Add(order);
-            }
+            TotalOrdersCount = Orders.Count;
+            PendingOrdersCount = Orders.Count(o => o.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
+            CompletedOrdersCount = Orders.Count(o => o.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+            TotalOrdersAmount = Orders.Sum(o => o.TotalAmount);
+            TotalPaidAmount = Orders.Sum(o => o.PaidAmount);
+            TotalRemainingAmount = Orders.Sum(o => o.RemainingAmount);
 
-            // Recalculate summary metrics from ALL customer orders
-            var allOrders = await _orderService.GetCustomerOrdersAsync("", "All");
-            TotalOrdersCount = allOrders.Count;
-            PendingOrdersCount = allOrders.Count(o => o.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
-            CompletedOrdersCount = allOrders.Count(o => o.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
-            TotalOrdersAmount = allOrders.Sum(o => o.TotalAmount);
+            var items = await _inventoryService.SearchItemsAsync("");
+            MasterItems = new ObservableCollection<Item>(items);
 
-            // Load master items if not loaded
-            if (MasterItems.Count == 0)
-            {
-                var items = await _inventoryService.SearchItemsAsync("");
-                MasterItems.Clear();
-                foreach (var item in items)
-                {
-                    MasterItems.Add(item);
-                }
-            }
+            var custs = await _customerService.SearchCustomersAsync("");
+            MasterCustomers = new ObservableCollection<Customer>(custs);
+        }
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            _ = LoadOrdersAsync();
         }
 
         [RelayCommand]
-        public async Task FilterStatusAsync(string status)
+        public async Task FilterByStatusAsync(string status)
         {
-            if (string.IsNullOrWhiteSpace(status)) status = "All";
             SelectedStatusFilter = status;
             await LoadOrdersAsync();
         }
@@ -187,6 +238,12 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task OpenNewOrderModalAsync()
         {
+            var items = await _inventoryService.SearchItemsAsync("");
+            MasterItems = new ObservableCollection<Item>(items);
+
+            var custs = await _customerService.SearchCustomersAsync("");
+            MasterCustomers = new ObservableCollection<Customer>(custs);
+
             ModalTitle = "New Customer Order";
             var nextNum = await _orderService.GenerateNextOrderNumberAsync();
 
@@ -198,12 +255,14 @@ namespace AlMadinaERP.Wpf.ViewModels
                 Status = "Pending"
             };
 
+            FormSelectedCustomer = null;
             FormCustomerName = string.Empty;
             FormAddress = string.Empty;
             FormContactNumber = string.Empty;
             FormOrderDate = DateTime.Now;
             FormReceivingDate = DateTime.Now.AddDays(1);
             FormStatus = "Pending";
+            FormPaidAmount = 0m;
 
             CurrentOrderItems.Clear();
             FormTotalAmount = 0m;
@@ -227,11 +286,23 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public void AddItemLine()
         {
-            if (string.IsNullOrWhiteSpace(NewItemName))
+            if (SelectedMasterItem == null && !string.IsNullOrWhiteSpace(NewItemName))
+            {
+                var match = MasterItems.FirstOrDefault(i => i.Name.Trim().Equals(NewItemName.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                                                           i.Code.Trim().Equals(NewItemName.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                {
+                    SelectedMasterItem = match;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(NewItemName) && SelectedMasterItem == null)
             {
                 MessageBox.Show("Please select an item or enter an item name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            var nameToUse = SelectedMasterItem != null ? SelectedMasterItem.Name : NewItemName.Trim();
 
             if (NewItemQuantity <= 0)
             {
@@ -242,13 +313,16 @@ namespace AlMadinaERP.Wpf.ViewModels
             var line = new CustomerOrderItem
             {
                 ItemId = SelectedMasterItem?.Id,
-                ItemNameSnapshot = NewItemName.Trim(),
+                ItemNameSnapshot = nameToUse,
                 ItemCode = SelectedMasterItem?.Code ?? NewItemCode ?? string.Empty,
-                Unit = string.IsNullOrWhiteSpace(NewItemUnit) ? "Pcs" : NewItemUnit.Trim(),
+                Unit = string.IsNullOrWhiteSpace(NewItemUnit) ? (SelectedMasterItem?.SellingUnit ?? "Pcs") : NewItemUnit.Trim(),
                 Quantity = NewItemQuantity,
-                Rate = Math.Max(0m, NewItemRate),
-                LineTotal = NewItemQuantity * Math.Max(0m, NewItemRate)
+                LengthFeet = IsLengthInputVisible ? NewItemLengthFeet : 0.0,
+                Rate = NewItemRate > 0 ? NewItemRate : (SelectedMasterItem?.SalePrice ?? 0m)
             };
+            line.Recalculate();
+
+            line.PropertyChanged += (s, e) => RecalculateFormTotal();
 
             CurrentOrderItems.Add(line);
             RecalculateFormTotal();
@@ -272,13 +346,16 @@ namespace AlMadinaERP.Wpf.ViewModels
             NewItemCode = string.Empty;
             NewItemUnit = "Pcs";
             NewItemQuantity = 1m;
+            NewItemLengthFeet = 0.0;
             NewItemRate = 0m;
             NewItemLineTotal = 0m;
+            IsLengthInputVisible = false;
         }
 
         public void RecalculateFormTotal()
         {
             FormTotalAmount = CurrentOrderItems.Sum(i => i.LineTotal);
+            OnPropertyChanged(nameof(FormRemainingAmount));
         }
 
         [RelayCommand]
@@ -290,6 +367,7 @@ namespace AlMadinaERP.Wpf.ViewModels
             CurrentOrder.OrderDate = FormOrderDate;
             CurrentOrder.ReceivingDate = FormReceivingDate;
             CurrentOrder.Status = string.IsNullOrWhiteSpace(FormStatus) ? "Pending" : FormStatus;
+            CurrentOrder.PaidAmount = FormPaidAmount;
 
             CurrentOrder.Items = new ObservableCollection<CustomerOrderItem>(CurrentOrderItems);
 
@@ -300,22 +378,32 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
-        public void EditOrder(CustomerOrder order)
+        public async Task EditOrderAsync(CustomerOrder order)
         {
             if (order == null) return;
+
+            var items = await _inventoryService.SearchItemsAsync("");
+            MasterItems = new ObservableCollection<Item>(items);
+
+            var custs = await _customerService.SearchCustomersAsync("");
+            MasterCustomers = new ObservableCollection<Customer>(custs);
 
             ModalTitle = $"Edit Customer Order ({order.OrderNumber})";
             CurrentOrder = order;
 
             FormCustomerName = order.CustomerName ?? string.Empty;
+            FormSelectedCustomer = MasterCustomers.FirstOrDefault(c => c.Name.Equals(FormCustomerName, StringComparison.OrdinalIgnoreCase));
             FormAddress = order.Address ?? string.Empty;
             FormContactNumber = order.ContactNumber ?? string.Empty;
             FormOrderDate = order.OrderDate;
-            FormReceivingDate = order.ReceivingDate;
+            FormReceivingDate = order.ReceivingDate ?? DateTime.Now.AddDays(1);
             FormStatus = order.Status ?? "Pending";
+            FormPaidAmount = order.PaidAmount;
 
-            CurrentOrderItems = new ObservableCollection<CustomerOrderItem>(
-                order.Items.Select(i => new CustomerOrderItem
+            CurrentOrderItems = new ObservableCollection<CustomerOrderItem>();
+            foreach (var i in order.Items)
+            {
+                var line = new CustomerOrderItem
                 {
                     Id = i.Id,
                     CustomerOrderId = i.CustomerOrderId,
@@ -324,10 +412,14 @@ namespace AlMadinaERP.Wpf.ViewModels
                     ItemCode = i.ItemCode,
                     Unit = i.Unit,
                     Quantity = i.Quantity,
+                    LengthFeet = i.LengthFeet,
                     Rate = i.Rate,
                     LineTotal = i.LineTotal
-                })
-            );
+                };
+                line.Recalculate();
+                line.PropertyChanged += (s, e) => RecalculateFormTotal();
+                CurrentOrderItems.Add(line);
+            }
 
             RecalculateFormTotal();
             ResetItemLineInputs();
@@ -373,7 +465,7 @@ namespace AlMadinaERP.Wpf.ViewModels
         public async Task PrintOrdersListAsync()
         {
             var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
-            var headers = new[] { "Sr #", "Order No.", "Customer Name", "Contact", "Address", "Order Date", "Receiving Date", "Total (PKR)", "Status" };
+            var headers = new[] { "Sr #", "Order No.", "Customer Name", "Contact", "Order Date", "Receiving Date", "Total (PKR)", "Paid (PKR)", "Balance (PKR)", "Status" };
 
             int sr = 1;
             var rows = Orders.Select(o => new[]
@@ -382,10 +474,11 @@ namespace AlMadinaERP.Wpf.ViewModels
                 o.OrderNumber ?? "",
                 o.CustomerName ?? "-",
                 o.ContactNumber ?? "-",
-                o.Address ?? "-",
                 o.OrderDate.ToString("dd/MM/yyyy"),
                 o.ReceivingDate.HasValue ? o.ReceivingDate.Value.ToString("dd/MM/yyyy") : "-",
                 $"Rs. {o.TotalAmount:N2}",
+                $"Rs. {o.PaidAmount:N2}",
+                $"Rs. {o.RemainingAmount:N2}",
                 o.Status ?? "Pending"
             });
 
@@ -397,8 +490,9 @@ namespace AlMadinaERP.Wpf.ViewModels
                 "",
                 "",
                 "",
-                "",
                 $"Total: Rs. {Orders.Sum(o => o.TotalAmount):N2}",
+                $"Paid: Rs. {Orders.Sum(o => o.PaidAmount):N2}",
+                $"Bal: Rs. {Orders.Sum(o => o.RemainingAmount):N2}",
                 $"{Orders.Count(o => o.Status == "Pending")} Pending / {Orders.Count(o => o.Status == "Completed")} Done"
             };
 

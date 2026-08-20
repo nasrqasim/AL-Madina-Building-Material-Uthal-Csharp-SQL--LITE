@@ -77,8 +77,7 @@ namespace AlMadinaERP.Wpf
                 using (var scope = ServiceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    await dbContext.Database.EnsureCreatedAsync();
-                    dbContext.EnableOptimizations();
+                    await EnsureDatabaseSchemaAsync(dbContext);
 
                     var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
                     await authService.EnsureSuperadminExistsAsync();
@@ -108,10 +107,66 @@ namespace AlMadinaERP.Wpf
             catch { }
         }
 
+        private static async Task EnsureDatabaseSchemaAsync(AppDbContext dbContext)
+        {
+            try
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+                dbContext.EnableOptimizations();
+
+                await dbContext.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS CustomerOrders (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        OrderNumber TEXT,
+                        CustomerName TEXT,
+                        Address TEXT,
+                        ContactNumber TEXT,
+                        OrderDate TEXT,
+                        ReceivingDate TEXT,
+                        Status TEXT,
+                        TotalAmount REAL DEFAULT 0,
+                        PaidAmount REAL DEFAULT 0,
+                        CreatedAt TEXT,
+                        UpdatedAt TEXT
+                    );
+                ");
+
+                await dbContext.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS CustomerOrderItems (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        CustomerOrderId INTEGER,
+                        ItemId INTEGER,
+                        ItemNameSnapshot TEXT,
+                        ItemCode TEXT,
+                        Unit TEXT,
+                        Quantity REAL DEFAULT 0,
+                        LengthFeet REAL DEFAULT 0,
+                        Rate REAL DEFAULT 0,
+                        LineTotal REAL DEFAULT 0
+                    );
+                ");
+
+                var columns = await dbContext.Database.SqlQueryRaw<string>("SELECT name FROM pragma_table_info('CustomerOrders');").ToListAsync();
+                if (!columns.Contains("PaidAmount", StringComparer.OrdinalIgnoreCase))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE CustomerOrders ADD COLUMN PaidAmount REAL DEFAULT 0;");
+                }
+                if (!columns.Contains("TotalAmount", StringComparer.OrdinalIgnoreCase))
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE CustomerOrders ADD COLUMN TotalAmount REAL DEFAULT 0;");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("SchemaMigrationError", ex);
+            }
+        }
+
         private void ConfigureServices(IServiceCollection services)
         {
-            // Database Context
-            services.AddDbContext<AppDbContext>();
+            // Database Context & DbContextFactory for per-operation DbContext lifetime
+            services.AddDbContextFactory<AppDbContext>();
+            services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
 
             // Repositories
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -126,17 +181,18 @@ namespace AlMadinaERP.Wpf
             services.AddScoped<ISalaryService, SalaryService>();
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IReportService, ReportService>();
-            services.AddScoped<IPrintService, PrintService>();
+            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             services.AddScoped<IBackupService, BackupService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IPrintService, PrintService>();
             services.AddScoped<IDatabaseSeederAndVerifierService, DatabaseSeederAndVerifierService>();
-            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
             // ViewModels (Transient so navigation gets fresh services & DbContext)
             services.AddTransient<MainViewModel>();
             services.AddTransient<LoginViewModel>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<SalesViewModel>();
+            services.AddTransient<CustomerOrdersViewModel>();
             services.AddTransient<PosViewModel>();
             services.AddTransient<PurchasesViewModel>();
             services.AddTransient<CustomersViewModel>();
@@ -148,11 +204,10 @@ namespace AlMadinaERP.Wpf
             services.AddTransient<SalaryViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<SettingsViewModel>();
-            services.AddTransient<CustomerOrdersViewModel>();
-
 
             // Views
             services.AddTransient<MainWindow>();
+            services.AddTransient<CustomerOrdersView>();
             services.AddTransient<LoginWindow>();
         }
     }

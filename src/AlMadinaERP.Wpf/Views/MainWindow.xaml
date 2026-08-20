@@ -18,6 +18,9 @@
         <DataTemplate DataType="{x:Type vm:SalesViewModel}">
             <views:SalesView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CustomerOrdersViewModel}">
+            <views:CustomerOrdersView/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PurchasesViewModel}">
             <views:PurchasesView/>
         </DataTemplate>
@@ -48,11 +51,7 @@
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView/>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:CustomerOrdersViewModel}">
-            <views:CustomerOrdersView/>
-        </DataTemplate>
     </Window.Resources>
-
 
     <Grid>
         <Grid.RowDefinitions>
@@ -198,21 +197,14 @@
                                 </Expander.Header>
                                 <StackPanel>
                                     <Button Content="Sale Invoice" Command="{Binding NavigateTabCommand}" CommandParameter="SaleInvoice" Style="{DynamicResource SubMenuButton}"/>
+                                    <Button Content="Customer Orders" Command="{Binding NavigateTabCommand}" CommandParameter="CustomerOrders" Style="{DynamicResource SubMenuButton}"/>
                                     <Button Content="Sale Return" Command="{Binding NavigateTabCommand}" CommandParameter="SaleReturn" Style="{DynamicResource SubMenuButton}"/>
                                     <Button Content="POS Counter Sale" Command="{Binding NavigateTabCommand}" CommandParameter="POSCounterSale" Style="{DynamicResource SubMenuButton}"/>
                                 </StackPanel>
                             </Expander>
 
-                            <!-- 6. Customer Orders -->
-                            <Button Style="{DynamicResource NavButton}" Command="{Binding NavigateTabCommand}" CommandParameter="Customer Orders">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="📋 " FontSize="13"/>
-                                    <TextBlock Text="Customer Orders" FontSize="13" FontWeight="SemiBold"/>
-                                </StackPanel>
-                            </Button>
 
                             <!-- 7. Receipts -->
-
                             <Expander IsExpanded="True">
                                 <Expander.Header>
                                     <StackPanel Orientation="Horizontal">

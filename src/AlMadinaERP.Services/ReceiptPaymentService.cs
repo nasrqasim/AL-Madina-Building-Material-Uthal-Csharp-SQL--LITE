@@ -8,19 +8,24 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class ReceiptPaymentService : IReceiptPaymentService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public ReceiptPaymentService(AppDbContext context)
+        public ReceiptPaymentService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<Receipt> ProcessReceiptAsync(Receipt receipt)
         {
+            using var _context = CreateContext();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -100,6 +105,9 @@ namespace AlMadinaERP.Services
                     }
                 }
 
+                receipt.Customer = null;
+                receipt.Vendor = null;
+                receipt.Bank = null;
                 if (receipt.Id == 0)
                 {
                     await _context.Receipts.AddAsync(receipt);
@@ -111,6 +119,7 @@ namespace AlMadinaERP.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                _context.ChangeTracker.Clear();
                 return receipt;
             }
             catch
@@ -122,6 +131,7 @@ namespace AlMadinaERP.Services
 
         public async Task<Payment> ProcessPaymentAsync(Payment payment)
         {
+            using var _context = CreateContext();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -247,6 +257,9 @@ namespace AlMadinaERP.Services
                     }
                 }
 
+                payment.Customer = null;
+                payment.Vendor = null;
+                payment.Bank = null;
                 if (payment.Id == 0)
                 {
                     await _context.Payments.AddAsync(payment);
@@ -258,6 +271,7 @@ namespace AlMadinaERP.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                _context.ChangeTracker.Clear();
                 return payment;
             }
             catch
@@ -269,6 +283,8 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Receipt>> SearchReceiptsAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             var q = _context.Receipts.Include(r => r.Customer).Include(r => r.Vendor).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -291,16 +307,38 @@ namespace AlMadinaERP.Services
             var receipts = await q.OrderByDescending(r => r.Date).ToListAsync();
             foreach (var r in receipts)
             {
-                if (string.IsNullOrWhiteSpace(r.CustomerName) && r.Customer != null)
-                    r.CustomerName = r.Customer.Name;
-                if (string.IsNullOrWhiteSpace(r.VendorName) && r.Vendor != null)
-                    r.VendorName = r.Vendor.Name;
+                if (r.CustomerId.HasValue && r.CustomerId.Value > 0)
+                {
+                    if (r.Customer != null)
+                    {
+                        r.CustomerName = r.Customer.Name;
+                    }
+                    else
+                    {
+                        var cust = await _context.Customers.FindAsync(r.CustomerId.Value);
+                        if (cust != null) r.CustomerName = cust.Name;
+                    }
+                }
+                if (r.VendorId.HasValue && r.VendorId.Value > 0)
+                {
+                    if (r.Vendor != null)
+                    {
+                        r.VendorName = r.Vendor.Name;
+                    }
+                    else
+                    {
+                        var vend = await _context.Vendors.FindAsync(r.VendorId.Value);
+                        if (vend != null) r.VendorName = vend.Name;
+                    }
+                }
             }
             return receipts;
         }
 
         public async Task<List<Payment>> SearchPaymentsAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             var q = _context.Payments.Include(p => p.Vendor).Include(p => p.Customer).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -322,16 +360,37 @@ namespace AlMadinaERP.Services
             var payments = await q.OrderByDescending(p => p.Date).ToListAsync();
             foreach (var p in payments)
             {
-                if (string.IsNullOrWhiteSpace(p.CustomerName) && p.Customer != null)
-                    p.CustomerName = p.Customer.Name;
-                if (string.IsNullOrWhiteSpace(p.VendorName) && p.Vendor != null)
-                    p.VendorName = p.Vendor.Name;
+                if (p.VendorId.HasValue && p.VendorId.Value > 0)
+                {
+                    if (p.Vendor != null)
+                    {
+                        p.VendorName = p.Vendor.Name;
+                    }
+                    else
+                    {
+                        var vend = await _context.Vendors.FindAsync(p.VendorId.Value);
+                        if (vend != null) p.VendorName = vend.Name;
+                    }
+                }
+                if (p.CustomerId.HasValue && p.CustomerId.Value > 0)
+                {
+                    if (p.Customer != null)
+                    {
+                        p.CustomerName = p.Customer.Name;
+                    }
+                    else
+                    {
+                        var cust = await _context.Customers.FindAsync(p.CustomerId.Value);
+                        if (cust != null) p.CustomerName = cust.Name;
+                    }
+                }
             }
             return payments;
         }
 
         public async Task DeleteReceiptAsync(int id)
         {
+            using var _context = CreateContext();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -394,6 +453,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeletePaymentAsync(int id)
         {
+            using var _context = CreateContext();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -456,11 +516,13 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Bank>> GetBanksAsync()
         {
+            using var _context = CreateContext();
             return await _context.Banks.Where(b => b.IsActive).ToListAsync();
         }
 
         public async Task<Bank> SaveBankAsync(Bank bank)
         {
+            using var _context = CreateContext();
             if (bank.Id == 0)
             {
                 await _context.Banks.AddAsync(bank);
@@ -475,6 +537,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteBankAsync(int id)
         {
+            using var _context = CreateContext();
             var bank = await _context.Banks.FindAsync(id);
             if (bank != null)
             {
@@ -485,6 +548,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Expense>> SearchExpensesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var q = _context.Expenses.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -510,6 +574,7 @@ namespace AlMadinaERP.Services
 
         public async Task<Expense> SaveExpenseAsync(Expense expense)
         {
+            using var _context = CreateContext();
             // Ensure default AccountCategory to prevent SQLite NOT NULL constraint failure
             var defaultAccCat = await _context.AccountCategories.FirstOrDefaultAsync();
             if (defaultAccCat == null)
@@ -534,6 +599,8 @@ namespace AlMadinaERP.Services
             bool isPaid = string.Equals(expense.Status, "Paid", StringComparison.OrdinalIgnoreCase)
                        || string.Equals(expense.Status, "Posted", StringComparison.OrdinalIgnoreCase);
 
+            expense.Bank = null;
+            expense.AccountCategory = null;
             if (expense.Id == 0)
             {
                 if (string.IsNullOrWhiteSpace(expense.VoucherNumber))
@@ -582,6 +649,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteExpenseAsync(int id)
         {
+            using var _context = CreateContext();
             var exp = await _context.Expenses.FindAsync(id);
             if (exp != null)
             {

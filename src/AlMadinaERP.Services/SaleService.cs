@@ -7,20 +7,26 @@ using AlMadinaERP.Core.Enums;
 using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AlMadinaERP.Services
 {
     public class SaleService : ISaleService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly ICustomerService _customerService;
 
-        public SaleService(AppDbContext context)
+        public SaleService(IDbContextFactory<AppDbContext> contextFactory, ICustomerService customerService)
         {
-            _context = context;
+            _contextFactory = contextFactory;
+            _customerService = customerService;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<string> GenerateNextInvoiceNumberAsync()
         {
+            using var _context = CreateContext();
             var company = await _context.CompanySettings.FirstOrDefaultAsync();
             var prefix = company?.InvoicePrefix ?? "INV";
             var count = await _context.SaleInvoices.CountAsync();
@@ -36,6 +42,8 @@ namespace AlMadinaERP.Services
         {
             if (invoice == null) throw new ArgumentNullException(nameof(invoice));
 
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -112,24 +120,23 @@ namespace AlMadinaERP.Services
 
                     if (item.ItemId > 0)
                     {
+                        item.Item = null;
                         sanitizedItems.Add(item);
                     }
                 }
                 invoice.Items = sanitizedItems;
 
-                // IF EDITING EXISTING INVOICE (Id > 0): REVERSE PREVIOUS EFFECTS FIRST (RULE 23)
+                // IF EDITING EXISTING INVOICE (Id > 0): REVERSE PREVIOUS EFFECTS FIRST & TRACK EXISTING ENTITY
                 if (invoice.Id > 0)
                 {
                     var existing = await _context.SaleInvoices
-                        .AsNoTracking()
                         .Include(s => s.Items)
                         .FirstOrDefaultAsync(s => s.Id == invoice.Id);
 
                     if (existing != null)
                     {
-                        // 1. Revert Old Stock using AsNoTracking DB values
-                        var oldItems = await _context.SaleInvoiceItems.AsNoTracking().Where(i => i.SaleInvoiceId == existing.Id).ToListAsync();
-                        foreach (var oldItem in oldItems)
+                        // 1. Revert Old Stock using tracked DB values
+                        foreach (var oldItem in existing.Items)
                         {
                             if (oldItem.ItemId <= 0) continue;
                             var dbItem = await _context.Items.FindAsync(oldItem.ItemId);
@@ -181,37 +188,65 @@ namespace AlMadinaERP.Services
                             }
                         }
 
-                        // 3. Remove Old Ledgers & Items
+                        // 3. Remove Old Ledgers
                         var oldCustLedgers = await _context.CustomerLedgers.Where(cl => cl.SaleInvoiceId == existing.Id).ToListAsync();
                         _context.CustomerLedgers.RemoveRange(oldCustLedgers);
 
                         var oldInvLedgers = await _context.InventoryLedgers.Where(il => il.SaleInvoiceId == existing.Id).ToListAsync();
                         _context.InventoryLedgers.RemoveRange(oldInvLedgers);
 
-                        var trackedOldItems = await _context.SaleInvoiceItems.Where(i => i.SaleInvoiceId == existing.Id).ToListAsync();
-                        _context.SaleInvoiceItems.RemoveRange(trackedOldItems);
-                        await _context.SaveChangesAsync();
-
-                        // Prepare new items with Id = 0 to avoid EF identity tracking conflicts
-                        var newItems = new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>();
-                        foreach (var item in invoice.Items)
+                        // 4. In-place line-item synchronization
+                        var incomingIds = invoice.Items.Select(i => i.Id).Where(id => id > 0).ToList();
+                        var itemsToRemove = existing.Items.Where(i => !incomingIds.Contains(i.Id)).ToList();
+                        foreach (var oldItem in itemsToRemove)
                         {
-                            newItems.Add(new SaleInvoiceItem
+                            _context.SaleInvoiceItems.Remove(oldItem);
+                            existing.Items.Remove(oldItem);
+                        }
+
+                        foreach (var incomingItem in invoice.Items)
+                        {
+                            if (incomingItem.Id > 0)
                             {
-                                Id = 0,
-                                SaleInvoiceId = existing.Id,
-                                ItemId = item.ItemId,
-                                ItemCode = item.ItemCode,
-                                ItemName = item.ItemName,
-                                Quantity = item.Quantity,
-                                Rate = item.Rate,
-                                UnitName = item.UnitName,
-                                DiscountPercent = item.DiscountPercent,
-                                DiscountAmount = item.DiscountAmount,
-                                TotalPrice = item.TotalPrice,
-                                Reason = item.Reason,
-                                IsReceived = item.IsReceived
-                            });
+                                var existingItem = existing.Items.FirstOrDefault(i => i.Id == incomingItem.Id);
+                                if (existingItem != null)
+                                {
+                                    existingItem.ItemId = incomingItem.ItemId;
+                                    existingItem.ItemCode = incomingItem.ItemCode;
+                                    existingItem.ItemName = incomingItem.ItemName;
+                                    existingItem.Quantity = incomingItem.Quantity;
+                                    existingItem.Rate = incomingItem.Rate;
+                                    existingItem.UnitName = incomingItem.UnitName;
+                                    existingItem.LengthFeet = incomingItem.LengthFeet;
+                                    existingItem.RatePerFoot = incomingItem.RatePerFoot;
+                                    existingItem.DiscountPercent = incomingItem.DiscountPercent;
+                                    existingItem.DiscountAmount = incomingItem.DiscountAmount;
+                                    existingItem.TotalPrice = incomingItem.TotalPrice;
+                                    existingItem.Reason = incomingItem.Reason;
+                                    existingItem.IsReceived = incomingItem.IsReceived;
+                                }
+                            }
+                            else
+                            {
+                                var newItem = new SaleInvoiceItem
+                                {
+                                    SaleInvoiceId = existing.Id,
+                                    ItemId = incomingItem.ItemId,
+                                    ItemCode = incomingItem.ItemCode,
+                                    ItemName = incomingItem.ItemName,
+                                    Quantity = incomingItem.Quantity,
+                                    Rate = incomingItem.Rate,
+                                    UnitName = incomingItem.UnitName,
+                                    LengthFeet = incomingItem.LengthFeet,
+                                    RatePerFoot = incomingItem.RatePerFoot,
+                                    DiscountPercent = incomingItem.DiscountPercent,
+                                    DiscountAmount = incomingItem.DiscountAmount,
+                                    TotalPrice = incomingItem.TotalPrice,
+                                    Reason = incomingItem.Reason,
+                                    IsReceived = incomingItem.IsReceived
+                                };
+                                existing.Items.Add(newItem);
+                            }
                         }
 
                         // Copy properties to existing tracked instance
@@ -221,13 +256,26 @@ namespace AlMadinaERP.Services
                         existing.Status = invoice.Status;
                         existing.Type = invoice.Type;
                         existing.IsCashSale = invoice.IsCashSale;
+                        existing.VehicleNo = invoice.VehicleNo;
+                        existing.DriverKm = invoice.DriverKm;
+                        existing.SaleCategory = invoice.SaleCategory;
+                        existing.AgainstInvoiceNo = invoice.AgainstInvoiceNo;
+                        existing.Salesman = invoice.Salesman;
+                        existing.Location = invoice.Location;
+                        existing.Employee = invoice.Employee;
                         existing.Subtotal = invoice.Subtotal;
                         existing.DiscountAmount = invoice.DiscountAmount;
                         existing.ExtraCharges = invoice.ExtraCharges;
+                        existing.VehicleCharges = invoice.VehicleCharges;
                         existing.AdditionalDiscount = invoice.AdditionalDiscount;
+                        existing.GrossRefund = invoice.GrossRefund;
+                        existing.CarServiceCharge = invoice.CarServiceCharge;
+                        existing.CarWashDiscount = invoice.CarWashDiscount;
+                        existing.NetRefund = invoice.NetRefund;
+                        existing.PaidAmount = invoice.PaidAmount;
                         existing.Remarks = invoice.Remarks;
-                        existing.Items = newItems;
 
+                        _context.SaleInvoices.Update(existing);
                         invoice = existing; // Use tracked entity
                     }
                 }
@@ -296,14 +344,8 @@ namespace AlMadinaERP.Services
                     invoice.OutstandingAmount = remainingDue;
                 }
 
-                // Clear navigation property references to avoid EF Core entity tracking collisions
+                // Ensure navigation property references do not cause EF Core tracking collisions
                 invoice.Customer = null;
-                foreach (var item in invoice.Items)
-                {
-                    item.Item = null;
-                    item.SaleInvoice = null;
-                }
-
                 if (invoice.Id == 0)
                 {
                     await _context.SaleInvoices.AddAsync(invoice);
@@ -375,26 +417,31 @@ namespace AlMadinaERP.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                _context.ChangeTracker.Clear();
                 return invoice;
             }
             catch
             {
                 await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
                 throw;
             }
         }
 
         public async Task<SaleInvoice?> GetSaleInvoiceByIdAsync(int id)
         {
+            using var _context = CreateContext();
             return await _context.SaleInvoices
                 .Include(s => s.Customer)
                 .Include(s => s.Items)
                 .ThenInclude(i => i.Item)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task<List<SaleInvoice>> SearchInvoicesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var q = _context.SaleInvoices
                 .Include(s => s.Customer)
                 .Include(s => s.Items)
@@ -421,6 +468,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteSaleInvoiceAsync(int id)
         {
+            using var _context = CreateContext();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {

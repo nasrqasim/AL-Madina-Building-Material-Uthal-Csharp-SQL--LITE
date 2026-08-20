@@ -7,25 +7,31 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class SalaryService : ISalaryService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public SalaryService(AppDbContext context)
+        public SalaryService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<Salary> ProcessSalaryAsync(Salary salary)
         {
+            using var _context = CreateContext();
             salary.NetPaid = (salary.BasicSalary + salary.Bonus) - (salary.AdvanceDeduction + salary.LoanDeduction);
             if (salary.Date == default)
             {
                 salary.Date = DateTime.Now;
             }
 
+            salary.Staff = null;
             if (salary.Id == 0)
                 await _context.Salaries.AddAsync(salary);
             else
@@ -37,6 +43,29 @@ namespace AlMadinaERP.Services
                 if (staff != null)
                 {
                     staff.TotalSalaryPaid += salary.NetPaid;
+                    
+                    if (salary.AdvanceDeduction > 0)
+                    {
+                        var repayment = new SalaryAdvance
+                        {
+                            VoucherNumber = $"SADR-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}",
+                            StaffId = staff.Id,
+                            StaffName = staff.FullName,
+                            Department = staff.Department,
+                            Amount = -salary.AdvanceDeduction,
+                            Date = salary.Date,
+                            RecoveryMonth = salary.SalaryMonth,
+                            Status = "Approved",
+                            Remarks = $"Advance Deducted in Salary {salary.SalaryMonth}"
+                        };
+                        await _context.SalaryAdvances.AddAsync(repayment);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    staff.TotalAdvances = (decimal)(await _context.SalaryAdvances
+                        .Where(sa => sa.StaffId == staff.Id)
+                        .SumAsync(sa => (double?)sa.Amount) ?? 0);
+
                     _context.Staffs.Update(staff);
                 }
             }
@@ -47,6 +76,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Salary>> GetSalariesAsync(string staffName = "", string salaryMonth = "")
         {
+            using var _context = CreateContext();
             var q = _context.Salaries.Include(s => s.Staff).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(staffName))
@@ -65,6 +95,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<Staff>> GetStaffsAsync(string query = "")
         {
+            using var _context = CreateContext();
             var q = _context.Staffs.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -83,6 +114,7 @@ namespace AlMadinaERP.Services
 
         public async Task<Staff> SaveStaffAsync(Staff staff)
         {
+            using var _context = CreateContext();
             if (string.IsNullOrWhiteSpace(staff.StaffCode))
             {
                 staff.StaffCode = "STF-" + DateTime.Now.ToString("fffSSmm");
@@ -124,6 +156,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteStaffAsync(int id)
         {
+            using var _context = CreateContext();
             var item = await _context.Staffs.FindAsync(id);
             if (item != null)
             {
@@ -142,6 +175,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<SalaryAdvance>> GetSalaryAdvancesAsync(string query = "")
         {
+            using var _context = CreateContext();
             var q = _context.SalaryAdvances.Include(sa => sa.Staff).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -157,6 +191,7 @@ namespace AlMadinaERP.Services
 
         public async Task<SalaryAdvance> SaveSalaryAdvanceAsync(SalaryAdvance advance)
         {
+            using var _context = CreateContext();
             if (string.IsNullOrWhiteSpace(advance.VoucherNumber))
             {
                 advance.VoucherNumber = "ADV-" + DateTime.Now.ToString("fffSSmm");
@@ -166,6 +201,7 @@ namespace AlMadinaERP.Services
                 advance.Date = DateTime.Now;
             }
 
+            advance.Staff = null;
             if (advance.Id == 0)
             {
                 await _context.SalaryAdvances.AddAsync(advance);
@@ -204,6 +240,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteSalaryAdvanceAsync(int id)
         {
+            using var _context = CreateContext();
             var item = await _context.SalaryAdvances.FindAsync(id);
             if (item != null)
             {
@@ -227,6 +264,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<JournalEntry>> GetJournalEntriesAsync(string query = "")
         {
+            using var _context = CreateContext();
             var q = _context.JournalEntries.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query))
@@ -242,6 +280,7 @@ namespace AlMadinaERP.Services
 
         public async Task<JournalEntry> SaveJournalEntryAsync(JournalEntry entry)
         {
+            using var _context = CreateContext();
             if (string.IsNullOrWhiteSpace(entry.VoucherNumber))
             {
                 entry.VoucherNumber = "JV-" + DateTime.Now.ToString("fffSSmm");
@@ -262,6 +301,7 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteJournalEntryAsync(int id)
         {
+            using var _context = CreateContext();
             var item = await _context.JournalEntries.FindAsync(id);
             if (item != null)
             {

@@ -10,53 +10,60 @@ namespace AlMadinaERP.Data
 {
     public class Repository<T> : IRepository<T> where T : class
     {
-        protected readonly AppDbContext _context;
-        protected readonly DbSet<T> _dbSet;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public Repository(AppDbContext context)
+        public Repository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
-            _dbSet = _context.Set<T>();
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<T?> GetByIdAsync(int id)
         {
-            return await _dbSet.FindAsync(id);
+            using var context = CreateContext();
+            return await context.Set<T>().FindAsync(id);
         }
 
         public async Task<List<T>> GetAllAsync()
         {
-            return await _dbSet.AsNoTracking().ToListAsync();
+            using var context = CreateContext();
+            return await context.Set<T>().AsNoTracking().ToListAsync();
         }
 
         public async Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
+            using var context = CreateContext();
+            return await context.Set<T>().AsNoTracking().Where(predicate).ToListAsync();
         }
 
         public async Task AddAsync(T entity)
         {
-            await _dbSet.AddAsync(entity);
-            await _context.SaveChangesAsync();
+            using var context = CreateContext();
+            await context.Set<T>().AddAsync(entity);
+            await context.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(T entity)
         {
-            _dbSet.Update(entity);
-            await _context.SaveChangesAsync();
+            using var context = CreateContext();
+            context.Set<T>().Update(entity);
+            await context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(T entity)
         {
-            _dbSet.Remove(entity);
-            await _context.SaveChangesAsync();
+            using var context = CreateContext();
+            context.Set<T>().Remove(entity);
+            await context.SaveChangesAsync();
         }
 
         public async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null)
         {
+            using var context = CreateContext();
             if (predicate == null)
-                return await _dbSet.CountAsync();
-            return await _dbSet.CountAsync(predicate);
+                return await context.Set<T>().CountAsync();
+            return await context.Set<T>().CountAsync(predicate);
         }
     }
 }

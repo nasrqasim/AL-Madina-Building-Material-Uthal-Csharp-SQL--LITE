@@ -344,6 +344,7 @@
                                                 <DataTemplate>
                                                     <ComboBox ItemsSource="{Binding DataContext.AvailableItems, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                               SelectedItem="{Binding Item, UpdateSourceTrigger=PropertyChanged}"
+                                                              Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                                               DisplayMemberPath="Name"
                                                               IsEditable="True"
                                                               IsTextSearchEnabled="True"

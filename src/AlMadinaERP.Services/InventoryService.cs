@@ -8,19 +8,24 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class InventoryService : IInventoryService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public InventoryService(AppDbContext context)
+        public InventoryService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<List<Item>> SearchItemsAsync(string query, int? categoryId = null)
         {
+            using var _context = CreateContext();
             var q = _context.Items
                 .Include(i => i.Category)
                 .Include(i => i.Subcategory)
@@ -48,6 +53,7 @@ namespace AlMadinaERP.Services
 
         public async Task<Item?> GetItemByIdAsync(int id)
         {
+            using var _context = CreateContext();
             return await _context.Items
                 .Include(i => i.Category)
                 .Include(i => i.Subcategory)
@@ -58,6 +64,7 @@ namespace AlMadinaERP.Services
 
         public async Task<Item> SaveItemAsync(Item item)
         {
+            using var _context = CreateContext();
             // Ensure default Unit
             var defaultUnit = await _context.Units.FirstOrDefaultAsync();
             if (defaultUnit == null)
@@ -130,13 +137,9 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteItemAsync(int id)
         {
-            // Safety: Check if item is referenced anywhere before deleting
-            var hasPurchaseRefs = await _context.PurchaseInvoiceItems.AnyAsync(pi => pi.ItemId == id);
-            if (hasPurchaseRefs)
-                throw new InvalidOperationException("Cannot delete this item. It is referenced in one or more Purchase Invoices. Please deactivate it instead.");
-
-            var hasSaleRefs = await _context.SaleInvoiceItems.AnyAsync(si => si.ItemId == id);
-            if (hasSaleRefs)
+            using var _context = CreateContext();
+            var hasSales = await _context.SaleInvoiceItems.AnyAsync(sii => sii.ItemId == id);
+            if (hasSales)
                 throw new InvalidOperationException("Cannot delete this item. It is referenced in one or more Sale Invoices. Please deactivate it instead.");
 
             var hasLedgerRefs = await _context.InventoryLedgers.AnyAsync(il => il.ItemId == id);
@@ -150,27 +153,53 @@ namespace AlMadinaERP.Services
                 item.Status = "Inactive";
                 item.LastUpdated = DateTime.Now;
                 await _context.SaveChangesAsync();
+                _context.ChangeTracker.Clear();
             }
         }
 
         public async Task<List<Category>> GetCategoriesAsync()
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             return await _context.Categories.OrderBy(c => c.Name).AsNoTracking().ToListAsync();
         }
 
         public async Task<Category> SaveCategoryAsync(Category category)
         {
+            using var _context = CreateContext();
             if (category.Id == 0)
                 await _context.Categories.AddAsync(category);
             else
                 _context.Categories.Update(category);
 
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
             return category;
+        }
+
+        public async Task DeleteCategoryAsync(int id)
+        {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
+            var category = await _context.Categories.FindAsync(id);
+            if (category != null)
+            {
+                var catNameLower = category.Name.Trim().ToLower();
+                var hasItems = await _context.Items.AnyAsync(i => i.IsActive && (i.CategoryId == id || (i.CategoryName != null && i.CategoryName.Trim().ToLower() == catNameLower)));
+                if (hasItems)
+                {
+                    throw new InvalidOperationException("Cannot delete this category because items are currently assigned to it. Reassign or remove those items first.");
+                }
+
+                _context.Categories.Remove(category);
+                await _context.SaveChangesAsync();
+                _context.ChangeTracker.Clear();
+            }
         }
 
         public async Task<List<Subcategory>> GetSubcategoriesAsync(int? categoryId = null)
         {
+            using var _context = CreateContext();
             var q = _context.Subcategories.Include(s => s.Category).AsQueryable();
             if (categoryId.HasValue)
                 q = q.Where(s => s.CategoryId == categoryId.Value);
@@ -180,56 +209,66 @@ namespace AlMadinaERP.Services
 
         public async Task<Subcategory> SaveSubcategoryAsync(Subcategory subcategory)
         {
+            using var _context = CreateContext();
             if (subcategory.Id == 0)
                 await _context.Subcategories.AddAsync(subcategory);
             else
                 _context.Subcategories.Update(subcategory);
 
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
             return subcategory;
         }
 
         public async Task<List<Unit>> GetUnitsAsync()
         {
+            using var _context = CreateContext();
             return await _context.Units.OrderBy(u => u.Name).AsNoTracking().ToListAsync();
         }
 
         public async Task<Unit> SaveUnitAsync(Unit unit)
         {
+            using var _context = CreateContext();
             if (unit.Id == 0)
                 await _context.Units.AddAsync(unit);
             else
                 _context.Units.Update(unit);
 
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
             return unit;
         }
 
         public async Task<List<LowStockItemDto>> GetLowStockAlertsAsync()
         {
-            return await _context.Items
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
+            var list = await _context.Items
                 .Include(i => i.Category)
                 .Include(i => i.SaleUnit)
                 .Where(i => i.IsActive && (
                     i.CurrentStock <= (i.LowStockAlert > 0 ? i.LowStockAlert : 5) ||
                     (i.CurrentStock - i.ReservedStock) <= (i.LowStockAlert > 0 ? i.LowStockAlert : 5)
                 ))
-                .Select(i => new LowStockItemDto
-                {
-                    ItemId = i.Id,
-                    Code = i.Code,
-                    Name = i.Name,
-                    CategoryName = i.Category != null ? i.Category.Name : (i.CategoryName ?? "General"),
-                    CurrentStock = i.CurrentStock,
-                    LowStockAlert = i.LowStockAlert > 0 ? i.LowStockAlert : 5,
-                    Unit = i.SaleUnit != null ? i.SaleUnit.ShortCode : (i.SellingUnit ?? "Pcs")
-                })
                 .AsNoTracking()
                 .ToListAsync();
+
+            return list.Select(i => new LowStockItemDto
+            {
+                ItemId = i.Id,
+                Code = i.Code ?? string.Empty,
+                Name = i.Name ?? string.Empty,
+                CategoryName = i.Category != null ? i.Category.Name : (!string.IsNullOrWhiteSpace(i.CategoryName) ? i.CategoryName : "General"),
+                CurrentStock = i.CurrentStock,
+                LowStockAlert = i.LowStockAlert > 0 ? i.LowStockAlert : 5,
+                Unit = !string.IsNullOrWhiteSpace(i.SellingUnit) ? i.SellingUnit : (!string.IsNullOrWhiteSpace(i.BaseUnit) ? i.BaseUnit : (i.SaleUnit != null ? i.SaleUnit.Name : "Pcs"))
+            }).ToList();
         }
 
         public async Task<List<InventoryLedger>> GetInventoryLedgerAsync(int itemId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             var q = _context.InventoryLedgers
                 .Include(l => l.Item)
                 .Where(l => l.ItemId == itemId);
@@ -246,8 +285,10 @@ namespace AlMadinaERP.Services
                 .ToListAsync();
         }
 
-        public async Task<List<InventoryLedger>> GetAllInventoryLedgerAsync(DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<List<InventoryLedger>> GetAllInventoryLedgerAsync(string searchQuery = "", DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
+            _context.ChangeTracker.Clear();
             var q = _context.InventoryLedgers
                 .Include(l => l.Item)
                 .AsQueryable();
@@ -257,9 +298,18 @@ namespace AlMadinaERP.Services
             if (toDate.HasValue)
                 q = q.Where(l => l.Date <= toDate.Value);
 
-            // Default safety cap of 500 records to prevent memory freeze on 100,000+ movements
-            if (!fromDate.HasValue && !toDate.HasValue)
-                q = q.Take(500);
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var term = searchQuery.Trim().ToLower();
+                q = q.Where(l => (l.ItemName != null && l.ItemName.ToLower().Contains(term)) ||
+                                 (l.ItemCode != null && l.ItemCode.ToLower().Contains(term)) ||
+                                 (l.VoucherNumber != null && l.VoucherNumber.ToLower().Contains(term)) ||
+                                 (l.TransactionType != null && l.TransactionType.ToLower().Contains(term)) ||
+                                 (l.Remarks != null && l.Remarks.ToLower().Contains(term)) ||
+                                 (l.Item != null && l.Item.Name.ToLower().Contains(term)) ||
+                                 (l.Item != null && l.Item.Code.ToLower().Contains(term)) ||
+                                 (l.Item != null && l.Item.CategoryName != null && l.Item.CategoryName.ToLower().Contains(term)));
+            }
 
             return await q
                 .OrderByDescending(l => l.Date)

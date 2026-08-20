@@ -30,6 +30,7 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         public DashboardViewModel DashboardVM { get; }
         public SalesViewModel SalesVM { get; }
+        public CustomerOrdersViewModel CustomerOrdersVM { get; }
         public PosViewModel PosVM { get; }
         public PurchasesViewModel PurchasesVM { get; }
         public CustomersViewModel CustomersVM { get; }
@@ -41,11 +42,11 @@ namespace AlMadinaERP.Wpf.ViewModels
         public SalaryViewModel SalaryVM { get; }
         public ReportsViewModel ReportsVM { get; }
         public SettingsViewModel SettingsVM { get; }
-        public CustomerOrdersViewModel CustomerOrdersVM { get; }
 
         public MainViewModel(
             DashboardViewModel dashboardVM,
             SalesViewModel salesVM,
+            CustomerOrdersViewModel customerOrdersVM,
             PosViewModel posVM,
             PurchasesViewModel purchasesVM,
             CustomersViewModel customersVM,
@@ -57,12 +58,12 @@ namespace AlMadinaERP.Wpf.ViewModels
             SalaryViewModel salaryVM,
             ReportsViewModel reportsVM,
             SettingsViewModel settingsVM,
-            CustomerOrdersViewModel customerOrdersVM,
             IAuthService authService)
         {
             _authService = authService;
             DashboardVM = dashboardVM;
             SalesVM = salesVM;
+            CustomerOrdersVM = customerOrdersVM;
             PosVM = posVM;
             PurchasesVM = purchasesVM;
             CustomersVM = customersVM;
@@ -74,12 +75,10 @@ namespace AlMadinaERP.Wpf.ViewModels
             SalaryVM = salaryVM;
             ReportsVM = reportsVM;
             SettingsVM = settingsVM;
-            CustomerOrdersVM = customerOrdersVM;
 
             _currentUser = _authService.CurrentUser?.FullName ?? "Superadmin";
             _currentView = dashboardVM;
         }
-
 
         [RelayCommand]
         public void Logout(System.Windows.Window? mainWindow)
@@ -95,6 +94,10 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (string.IsNullOrEmpty(tabName)) return;
 
+            // Cancel any pending background searches before starting page load
+            SalesVM.CancelPendingSearch();
+            PurchasesVM.CancelPendingSearch();
+
             StatusMessage = $"Navigating to {tabName}...";
             Func<Task>? loadTask = null;
 
@@ -103,9 +106,15 @@ namespace AlMadinaERP.Wpf.ViewModels
                 CurrentView = DashboardVM;
                 loadTask = () => DashboardVM.LoadDashboardAsync();
             }
+            else if (tabName.Equals("CustomerOrders") || tabName.Equals("Customer Orders") || tabName.Equals("CustomerOrder"))
+            {
+                CurrentView = CustomerOrdersVM;
+                loadTask = () => CustomerOrdersVM.LoadOrdersAsync();
+            }
             else if (tabName.StartsWith("Sales") || tabName.StartsWith("Sale") || tabName.Contains("POS"))
             {
                 CurrentView = SalesVM;
+                SalesVM.SearchQuery = string.Empty;
                 if (tabName.Contains("Return"))
                 {
                     SalesVM.ActiveSubView = SalesActiveSubView.SaleReturnList;
@@ -123,6 +132,7 @@ namespace AlMadinaERP.Wpf.ViewModels
             else if (tabName.StartsWith("Purchases") || tabName.StartsWith("Purchase"))
             {
                 CurrentView = PurchasesVM;
+                PurchasesVM.SearchQuery = string.Empty;
                 if (tabName.Contains("Return"))
                 {
                     PurchasesVM.IsReturnMode = true;
@@ -280,26 +290,24 @@ namespace AlMadinaERP.Wpf.ViewModels
                 CurrentView = SettingsVM;
                 loadTask = () => SettingsVM.LoadSettingsAsync();
             }
-            else if (tabName.StartsWith("Customer Order") || tabName.StartsWith("CustomerOrder") || tabName.Contains("Customer Order"))
-            {
-                CurrentView = CustomerOrdersVM;
-                loadTask = () => CustomerOrdersVM.LoadOrdersAsync();
-            }
-
 
             if (loadTask != null)
             {
                 try
                 {
                     await loadTask();
+                    StatusMessage = $"Ready - {tabName}";
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Navigation data load error for {tabName}: {ex.Message}");
+                    StatusMessage = $"Warning: Could not load {tabName} ({ex.Message})";
                 }
             }
-
-            StatusMessage = $"Ready - {tabName}";
+            else
+            {
+                StatusMessage = $"Ready - {tabName}";
+            }
         }
     }
 

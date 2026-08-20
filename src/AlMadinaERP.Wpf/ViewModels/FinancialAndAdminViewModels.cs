@@ -275,8 +275,6 @@ namespace AlMadinaERP.Wpf.ViewModels
         private void ResetNewReceipt()
         {
             var isBank = ActiveSubView == "BankReceiptForm" || ActiveSubView == "BankReceiptList";
-            SelectedCustomer = null;
-            SelectedBank = null;
             NewReceipt = new Receipt
             {
                 ReceiptNumber = (isBank ? "BR-" : "CR-") + DateTime.Now.ToString("fffSSm"),
@@ -286,6 +284,8 @@ namespace AlMadinaERP.Wpf.ViewModels
                 ReceivedBy = isBank ? "Bank Account" : "Cashier / Counter",
                 Status = "Posted"
             };
+            SelectedCustomer = null;
+            SelectedBank = null;
         }
 
         private void ResetNewOtherIncome()
@@ -305,9 +305,6 @@ namespace AlMadinaERP.Wpf.ViewModels
         private void ResetNewPayment()
         {
             var isBank = ActiveSubView == "BankPaymentForm" || ActiveSubView == "BankPaymentList";
-            SelectedVendor = null;
-            SelectedCustomer = null;
-            SelectedBank = null;
             IsVendorPayment = true;
             OnPropertyChanged(nameof(IsCustomerPayment));
             NewPayment = new Payment
@@ -321,6 +318,9 @@ namespace AlMadinaERP.Wpf.ViewModels
                 PayToCategory = "Vendor",
                 Status = "Posted"
             };
+            SelectedVendor = null;
+            SelectedCustomer = null;
+            SelectedBank = null;
         }
 
         [RelayCommand]
@@ -379,12 +379,12 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (value != null)
             {
-                if (NewReceipt != null)
+                if (NewReceipt != null && NewReceipt.Id == 0)
                 {
                     NewReceipt.CustomerId = value.Id > 0 ? value.Id : null;
                     NewReceipt.CustomerName = value.Name;
                 }
-                if (NewPayment != null && !IsVendorPayment)
+                if (NewPayment != null && NewPayment.Id == 0 && !IsVendorPayment)
                 {
                     NewPayment.CustomerId = value.Id > 0 ? value.Id : null;
                     NewPayment.CustomerName = value.Name;
@@ -396,7 +396,7 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (value != null)
             {
-                if (NewPayment != null && IsVendorPayment)
+                if (NewPayment != null && NewPayment.Id == 0 && IsVendorPayment)
                 {
                     NewPayment.VendorId = value.Id > 0 ? value.Id : null;
                     NewPayment.VendorName = value.Name;
@@ -523,6 +523,25 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewReceipt.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
                 NewReceipt.CustomerName = SelectedCustomer.Name;
             }
+            else if (NewReceipt.CustomerId.HasValue && NewReceipt.CustomerId.Value > 0)
+            {
+                var cust = Customers.FirstOrDefault(c => c.Id == NewReceipt.CustomerId.Value);
+                if (cust != null)
+                {
+                    SelectedCustomer = cust;
+                    NewReceipt.CustomerName = cust.Name;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(NewReceipt.CustomerName))
+            {
+                var cust = Customers.FirstOrDefault(c => c.Name.Equals(NewReceipt.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (cust != null)
+                {
+                    SelectedCustomer = cust;
+                    NewReceipt.CustomerId = cust.Id;
+                    NewReceipt.CustomerName = cust.Name;
+                }
+            }
 
             if (SelectedBank != null)
             {
@@ -566,6 +585,25 @@ namespace AlMadinaERP.Wpf.ViewModels
                     NewPayment.VendorId = SelectedVendor.Id > 0 ? SelectedVendor.Id : null;
                     NewPayment.VendorName = SelectedVendor.Name;
                 }
+                else if (NewPayment.VendorId.HasValue && NewPayment.VendorId.Value > 0)
+                {
+                    var vend = Vendors.FirstOrDefault(v => v.Id == NewPayment.VendorId.Value);
+                    if (vend != null)
+                    {
+                        SelectedVendor = vend;
+                        NewPayment.VendorName = vend.Name;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(NewPayment.VendorName))
+                {
+                    var vend = Vendors.FirstOrDefault(v => v.Name.Equals(NewPayment.VendorName.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (vend != null)
+                    {
+                        SelectedVendor = vend;
+                        NewPayment.VendorId = vend.Id;
+                        NewPayment.VendorName = vend.Name;
+                    }
+                }
             }
             else
             {
@@ -575,6 +613,25 @@ namespace AlMadinaERP.Wpf.ViewModels
                 {
                     NewPayment.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
                     NewPayment.CustomerName = SelectedCustomer.Name;
+                }
+                else if (NewPayment.CustomerId.HasValue && NewPayment.CustomerId.Value > 0)
+                {
+                    var cust = Customers.FirstOrDefault(c => c.Id == NewPayment.CustomerId.Value);
+                    if (cust != null)
+                    {
+                        SelectedCustomer = cust;
+                        NewPayment.CustomerName = cust.Name;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(NewPayment.CustomerName))
+                {
+                    var cust = Customers.FirstOrDefault(c => c.Name.Equals(NewPayment.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (cust != null)
+                    {
+                        SelectedCustomer = cust;
+                        NewPayment.CustomerId = cust.Id;
+                        NewPayment.CustomerName = cust.Name;
+                    }
                 }
             }
 
@@ -1851,6 +1908,26 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private string _inventorySearchQuery = string.Empty;
 
+        private System.Threading.CancellationTokenSource? _invSearchCts;
+
+        partial void OnInventorySearchQueryChanged(string value)
+        {
+            _invSearchCts?.Cancel();
+            _invSearchCts = new System.Threading.CancellationTokenSource();
+            var token = _invSearchCts.Token;
+
+            Task.Delay(250, token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    {
+                        await FilterInventoryLedgerAsync();
+                    });
+                }
+            }, TaskScheduler.Default);
+        }
+
         [ObservableProperty]
         private DateTime? _inventoryFromDate = new DateTime(2026, 1, 1);
 
@@ -1860,13 +1937,13 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task FilterInventoryLedgerAsync()
         {
-            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery);
+            var items = await _inventoryService.SearchItemsAsync(InventorySearchQuery ?? "");
             InventoryItems = new ObservableCollection<Item>(items);
             TotalInventoryItemsCount = items.Count;
             TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
             TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
 
-            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(InventoryFromDate, InventoryToDate);
+            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(InventorySearchQuery ?? "", InventoryFromDate, InventoryToDate);
             InventoryLedgerEntries = new ObservableCollection<InventoryLedger>(invLedgerList);
         }
 
@@ -2095,7 +2172,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                             TotalInventoryStockValue = items.Sum(i => i.CurrentStock * i.SalePrice);
                             TotalInventoryPurchaseValue = items.Sum(i => i.CurrentStock * i.PurchasePrice);
 
-                            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(from, to);
+                            var invLedgerList = await _inventoryService.GetAllInventoryLedgerAsync(InventorySearchQuery ?? "", from, to);
                             InventoryLedgerEntries = new ObservableCollection<InventoryLedger>(invLedgerList);
                             break;
                         }

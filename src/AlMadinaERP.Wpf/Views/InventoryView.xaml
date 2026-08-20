@@ -104,23 +104,28 @@
                             <Button Command="{Binding OpenAddCategoryModalCommand}" Content="+" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="12" FontWeight="Bold" Width="22" Height="22" Padding="0" HorizontalAlignment="Right" Cursor="Hand" ToolTip="Add Category"/>
                         </Grid>
 
-                        <Border Background="#F8FAFC" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
-                            <Grid>
-                                <TextBlock Text="All Categories" Foreground="#334155" FontSize="12" FontWeight="SemiBold"/>
-                                <TextBlock Text="›" Foreground="#94A3B8" HorizontalAlignment="Right"/>
-                            </Grid>
-                        </Border>
+                        <Button Command="{Binding SelectCategoryCommand}" CommandParameter="{x:Null}" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,4" HorizontalContentAlignment="Stretch" Cursor="Hand">
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="8,6">
+                                <Grid>
+                                    <TextBlock Text="All Categories" Foreground="#334155" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock Text="›" Foreground="#94A3B8" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </Border>
+                        </Button>
 
                         <ItemsControl ItemsSource="{Binding Categories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FFF1F2" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                                    <Border Background="#FFF1F2" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="6" Padding="6,4" Margin="0,0,0,4">
                                         <Grid>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="📁 " FontSize="12"/>
-                                                <TextBlock Text="{Binding Name}" Foreground="#991B1B" FontSize="12" FontWeight="Bold"/>
-                                            </StackPanel>
-                                            <TextBlock Text="›" Foreground="#991B1B" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                            <Button Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Cursor="Hand">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="📁 " FontSize="12"/>
+                                                    <TextBlock Text="{Binding Name}" Foreground="#991B1B" FontSize="12" FontWeight="Bold"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Button Command="{Binding DataContext.DeleteCategoryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Content="🗑" Foreground="#DC2626" Background="Transparent" BorderThickness="0" FontSize="11" Padding="4,2" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" ToolTip="Delete Category"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

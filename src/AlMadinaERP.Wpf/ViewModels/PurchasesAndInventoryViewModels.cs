@@ -64,22 +64,37 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         private System.Threading.CancellationTokenSource? _searchCts;
 
-        partial void OnSearchQueryChanged(string value)
+        public void CancelPendingSearch()
         {
             _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
+        }
+
+        partial void OnSearchQueryChanged(string value)
+        {
+            CancelPendingSearch();
             _searchCts = new System.Threading.CancellationTokenSource();
             var token = _searchCts.Token;
 
-            Task.Delay(250, token).ContinueWith(t =>
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            Task.Run(async () =>
             {
-                if (!t.IsCanceled)
+                try
                 {
-                    System.Windows.Application.Current?.Dispatcher?.InvokeAsync(async () =>
+                    await Task.Delay(250, token);
+                    if (!token.IsCancellationRequested && dispatcher != null)
                     {
-                        await LoadPurchasesAsync();
-                    });
+                        await dispatcher.InvokeAsync(async () =>
+                        {
+                            if (!token.IsCancellationRequested)
+                                await LoadPurchasesAsync();
+                        });
+                    }
                 }
-            }, TaskScheduler.Default);
+                catch (TaskCanceledException) { }
+                catch (Exception) { }
+            }, token);
         }
         partial void OnFromDateChanged(DateTime? value) => _ = LoadPurchasesAsync();
         partial void OnToDateChanged(DateTime? value) => _ = LoadPurchasesAsync();
@@ -107,6 +122,9 @@ namespace AlMadinaERP.Wpf.ViewModels
         [ObservableProperty]
         private int _draftReturnsCount;
 
+        [ObservableProperty]
+        private decimal _totalReturnsAmount;
+
         public PurchasesViewModel(
             IPurchaseService purchaseService,
             IVendorService vendorService,
@@ -120,20 +138,71 @@ namespace AlMadinaERP.Wpf.ViewModels
             ResetNewPurchase();
         }
 
+        private bool _isRefreshingVendors = false;
+
+        private void OnPurchaseItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PurchaseInvoiceItem.Quantity) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.Rate) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.LengthFeet) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.RatePerFoot) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.DiscountPercent) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.TaxPercent) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.Item) ||
+                e.PropertyName == nameof(PurchaseInvoiceItem.TotalPrice))
+            {
+                RecalculateTotals();
+            }
+        }
+
+        private void SubscribePurchaseItemEvents(PurchaseInvoiceItem? item)
+        {
+            if (item == null) return;
+            item.PropertyChanged -= OnPurchaseItemPropertyChanged;
+            item.PropertyChanged += OnPurchaseItemPropertyChanged;
+        }
+
+        private void UnsubscribePurchaseItemEvents(PurchaseInvoiceItem? item)
+        {
+            if (item == null) return;
+            item.PropertyChanged -= OnPurchaseItemPropertyChanged;
+        }
+
+        private void UnsubscribeAllPurchaseItemEvents(PurchaseInvoice? invoice)
+        {
+            if (invoice?.Items != null)
+            {
+                foreach (var item in invoice.Items)
+                {
+                    UnsubscribePurchaseItemEvents(item);
+                }
+            }
+        }
+
         private void ResetNewPurchase()
         {
-            SelectedVendor = null;
-            NewPurchase = new PurchaseInvoice
+            _isRefreshingVendors = true;
+            try
             {
-                PurchaseNumber = (IsReturnMode ? "PR-" : "PI-") + DateTime.Now.ToString("fffSSm"),
-                Date = DateTime.Now,
-                VendorInvoiceDate = DateTime.Now,
-                DueDate = DateTime.Now.AddDays(30),
-                Status = "Draft",
-                Currency = "PKR",
-                PaymentMethod = "Cash"
-            };
-            AddEmptyLineItem();
+                UnsubscribeAllPurchaseItemEvents(NewPurchase);
+
+                NewPurchase = new PurchaseInvoice
+                {
+                    PurchaseNumber = (IsReturnMode ? "PR-" : "PI-") + DateTime.Now.ToString("fffSSm"),
+                    Date = DateTime.Now,
+                    VendorInvoiceDate = DateTime.Now,
+                    DueDate = DateTime.Now.AddDays(30),
+                    Status = "Draft",
+                    Currency = "PKR",
+                    PaymentMethod = "Cash"
+                };
+                SelectedVendor = null;
+                AddEmptyLineItem();
+            }
+            finally
+            {
+                _isRefreshingVendors = false;
+            }
         }
 
         [RelayCommand]
@@ -161,67 +230,99 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task LoadPurchasesAsync()
         {
-            var toDateEnd = ToDate.HasValue ? ToDate.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
-            var list = await _purchaseService.SearchPurchasesAsync(SearchQuery, FromDate, toDateEnd);
-
-            if (!string.IsNullOrEmpty(StatusFilter) && StatusFilter != "All")
-                list = list.Where(p => p.Status == StatusFilter).ToList();
-
-            var invoices = list.Where(p => p.Type == PurchaseType.PurchaseInvoice).ToList();
-            var returns = list.Where(p => p.Type == PurchaseType.PurchaseReturn).ToList();
-
-            Purchases = new ObservableCollection<PurchaseInvoice>(invoices);
-            PurchaseReturns = new ObservableCollection<PurchaseInvoice>(returns);
-
-            // Metrics for Invoices
-            TotalInvoicesCount = invoices.Count;
-            OutstandingAmount = invoices.Sum(i => i.OutstandingAmount > 0 ? i.OutstandingAmount : i.TotalAmount);
-            PostedInvoicesCount = invoices.Count(i => i.Status == "Posted");
-            PaidInvoicesCount = invoices.Count(i => i.Status == "Paid");
-
-            // Metrics for Returns
-            TotalReturnsCount = returns.Count;
-            PostedReturnsCount = returns.Count(r => r.Status == "Posted");
-            DraftReturnsCount = returns.Count(r => r.Status == "Draft");
-
-            if (Vendors.Count == 0)
+            try
             {
-                var vList = await _vendorService.SearchVendorsAsync("");
-                Vendors = new ObservableCollection<Vendor>(vList);
-            }
+                var toDateEnd = ToDate.HasValue ? ToDate.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
+                var targetType = IsReturnMode ? PurchaseType.PurchaseReturn : PurchaseType.PurchaseInvoice;
+                var list = await _purchaseService.SearchPurchasesAsync(SearchQuery, FromDate, toDateEnd, targetType);
 
-            if (AvailableItems.Count == 0)
-            {
+                if (!string.IsNullOrEmpty(StatusFilter) && StatusFilter != "All")
+                    list = list.Where(p => p.Status == StatusFilter).ToList();
+
+                var invoices = list.Where(p => p.Type == PurchaseType.PurchaseInvoice).ToList();
+                var returns = list.Where(p => p.Type == PurchaseType.PurchaseReturn).ToList();
+
+                Purchases = new ObservableCollection<PurchaseInvoice>(invoices);
+                PurchaseReturns = new ObservableCollection<PurchaseInvoice>(returns);
+
+                // Metrics for Invoices
+                TotalInvoicesCount = invoices.Count;
+                OutstandingAmount = invoices.Sum(i => i.OutstandingAmount > 0 ? i.OutstandingAmount : i.TotalAmount);
+                PostedInvoicesCount = invoices.Count(i => i.Status == "Posted");
+                PaidInvoicesCount = invoices.Count(i => i.Status == "Paid");
+
+                // Metrics for Returns
+                TotalReturnsCount = returns.Count;
+                PostedReturnsCount = returns.Count(r => r.Status == "Posted");
+                DraftReturnsCount = returns.Count(r => r.Status == "Draft");
+                TotalReturnsAmount = returns.Sum(r => r.TotalAmount);
+
+                _isRefreshingVendors = true;
+                try
+                {
+                    var vList = await _vendorService.SearchVendorsAsync("");
+                    var selVendId = SelectedVendor?.Id ?? NewPurchase?.VendorId;
+                    Vendors = new ObservableCollection<Vendor>(vList);
+                    if (selVendId.HasValue && selVendId.Value > 0)
+                        SelectedVendor = Vendors.FirstOrDefault(v => v.Id == selVendId.Value);
+                }
+                finally
+                {
+                    _isRefreshingVendors = false;
+                }
+
                 var iList = await _inventoryService.SearchItemsAsync("");
                 AvailableItems = new ObservableCollection<Item>(iList);
+
+                EditInvoiceCommand.NotifyCanExecuteChanged();
+                DeletePurchaseCommand.NotifyCanExecuteChanged();
+                ViewInvoiceCommand.NotifyCanExecuteChanged();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PurchasesViewModel] LoadPurchasesAsync error: {ex.Message}");
             }
         }
 
         partial void OnSelectedVendorChanged(Vendor? value)
         {
-            if (value != null)
+            if (_isRefreshingVendors) return;
+            if (NewPurchase != null)
             {
-                NewPurchase.VendorId = value.Id;
-                NewPurchase.VendorName = value.Name;
-            }
-            else
-            {
-                NewPurchase.VendorId = null;
-                NewPurchase.VendorName = "Direct / Walk-in Purchase (No Vendor)";
+                if (value != null)
+                {
+                    NewPurchase.VendorId = value.Id;
+                    NewPurchase.VendorName = value.Name;
+                }
+                else
+                {
+                    NewPurchase.VendorId = null;
+                    if (string.IsNullOrWhiteSpace(NewPurchase.VendorName) || 
+                        NewPurchase.VendorName == "Direct / Walk-in Purchase (No Vendor)")
+                    {
+                        NewPurchase.VendorName = "Direct / Walk-in Purchase (No Vendor)";
+                    }
+                }
             }
         }
 
         private async Task EnsureItemsLoadedAsync()
         {
-            if (AvailableItems.Count == 0)
-            {
-                var items = await _inventoryService.SearchItemsAsync("");
-                foreach (var item in items) AvailableItems.Add(item);
-            }
-            if (Vendors.Count == 0)
+            var items = await _inventoryService.SearchItemsAsync("");
+            AvailableItems = new ObservableCollection<Item>(items);
+
+            _isRefreshingVendors = true;
+            try
             {
                 var vList = await _vendorService.SearchVendorsAsync("");
-                foreach (var v in vList) Vendors.Add(v);
+                var selVendId = SelectedVendor?.Id ?? NewPurchase?.VendorId;
+                Vendors = new ObservableCollection<Vendor>(vList);
+                if (selVendId.HasValue && selVendId.Value > 0)
+                    SelectedVendor = Vendors.FirstOrDefault(v => v.Id == selVendId.Value);
+            }
+            finally
+            {
+                _isRefreshingVendors = false;
             }
         }
 
@@ -247,6 +348,7 @@ namespace AlMadinaERP.Wpf.ViewModels
         public void CloseForm()
         {
             IsFormVisible = false;
+            ResetNewPurchase();
         }
 
         [RelayCommand]
@@ -267,20 +369,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                 TotalPrice = 0
             };
 
-            newItem.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(PurchaseInvoiceItem.Quantity) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.Rate) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.LengthFeet) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.RatePerFoot) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.DiscountPercent) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.TaxPercent) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.Item) ||
-                    e.PropertyName == nameof(PurchaseInvoiceItem.TotalPrice))
-                {
-                    RecalculateTotals();
-                }
-            };
+            SubscribePurchaseItemEvents(newItem);
 
             var app = System.Windows.Application.Current;
             if (app != null && app.Dispatcher != null && !app.Dispatcher.CheckAccess())
@@ -303,11 +392,14 @@ namespace AlMadinaERP.Wpf.ViewModels
         {
             if (parameter is PurchaseInvoiceItem item && NewPurchase.Items.Contains(item))
             {
+                UnsubscribePurchaseItemEvents(item);
                 NewPurchase.Items.Remove(item);
                 RecalculateTotals();
             }
             else if (NewPurchase.Items.Count > 0)
             {
+                var lastItem = NewPurchase.Items[NewPurchase.Items.Count - 1];
+                UnsubscribePurchaseItemEvents(lastItem);
                 NewPurchase.Items.RemoveAt(NewPurchase.Items.Count - 1);
                 RecalculateTotals();
             }
@@ -354,6 +446,15 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         private async Task SaveInternalAsync()
         {
+            var app = System.Windows.Application.Current;
+            if (app != null && app.Dispatcher != null)
+            {
+                if (!app.Dispatcher.CheckAccess())
+                    app.Dispatcher.Invoke(() => System.Windows.Input.Keyboard.ClearFocus());
+                else
+                    System.Windows.Input.Keyboard.ClearFocus();
+            }
+
             NewPurchase.Type = IsReturnMode ? PurchaseType.PurchaseReturn : PurchaseType.PurchaseInvoice;
 
             foreach (var item in NewPurchase.Items)
@@ -367,11 +468,24 @@ namespace AlMadinaERP.Wpf.ViewModels
             var validItems = NewPurchase.Items.Where(i => i.ItemId > 0 && i.Quantity > 0).ToList();
             if (validItems.Count == 0)
             {
-                System.Windows.MessageBox.Show(
-                    "Please select at least one item from the list before saving.",
-                    "No Items Selected",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
+                var owner = System.Windows.Application.Current?.MainWindow;
+                if (owner != null)
+                {
+                    System.Windows.MessageBox.Show(
+                        owner,
+                        "Please select at least one item from the list before saving.",
+                        "No Items Selected",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        "Please select at least one item from the list before saving.",
+                        "No Items Selected",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                }
                 return;
             }
 
@@ -414,8 +528,62 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewPurchase.IsCashPurchase = true;
             }
 
-            await _purchaseService.SavePurchaseInvoiceAsync(NewPurchase);
-            IsFormVisible = false;
+            PurchaseInvoice savedInvoice;
+            try
+            {
+                savedInvoice = await _purchaseService.SavePurchaseInvoiceAsync(NewPurchase);
+            }
+            catch (Exception ex)
+            {
+                var owner = System.Windows.Application.Current?.MainWindow;
+                if (owner != null)
+                {
+                    System.Windows.MessageBox.Show(
+                        owner,
+                        $"Failed to save purchase invoice: {ex.Message}",
+                        "Save Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Failed to save purchase invoice: {ex.Message}",
+                        "Save Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                return;
+            }
+
+            CloseForm();
+
+            var printOwner = System.Windows.Application.Current?.MainWindow;
+            System.Windows.MessageBoxResult confirmPrint;
+            if (printOwner != null)
+            {
+                confirmPrint = System.Windows.MessageBox.Show(
+                    printOwner,
+                    "Purchase Invoice saved successfully! Do you want to print A4 invoice?",
+                    "Success",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+            }
+            else
+            {
+                confirmPrint = System.Windows.MessageBox.Show(
+                    "Purchase Invoice saved successfully! Do you want to print A4 invoice?",
+                    "Success",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+            }
+
+            if (confirmPrint == System.Windows.MessageBoxResult.Yes)
+            {
+                _printService.PrintA4PurchaseInvoice(savedInvoice, new CompanySetting());
+            }
+
+            await Task.Delay(50); // Allow UI to settle
             await LoadPurchasesAsync();
         }
 
@@ -480,31 +648,59 @@ namespace AlMadinaERP.Wpf.ViewModels
         public async Task EditInvoiceAsync(PurchaseInvoice purchase)
         {
             if (purchase == null) return;
-            var fullPurchase = await _purchaseService.GetPurchaseInvoiceByIdAsync(purchase.Id);
-            if (fullPurchase == null) return;
-
-            NewPurchase = fullPurchase;
-            if (fullPurchase.VendorId.HasValue && fullPurchase.VendorId.Value > 0)
-                SelectedVendor = Vendors.FirstOrDefault(v => v.Id == fullPurchase.VendorId.Value);
-            else if (!string.IsNullOrWhiteSpace(fullPurchase.VendorName))
-                SelectedVendor = Vendors.FirstOrDefault(v => v.Name.Equals(fullPurchase.VendorName, StringComparison.OrdinalIgnoreCase));
-            IsReturnMode = fullPurchase.Type == PurchaseType.PurchaseReturn;
-            IsFormVisible = true;
-
-            foreach (var item in NewPurchase.Items)
+            _isRefreshingVendors = true;
+            try
             {
-                item.PropertyChanged += (s, e) =>
+                await EnsureItemsLoadedAsync();
+
+                var fullPurchase = await _purchaseService.GetPurchaseInvoiceByIdAsync(purchase.Id);
+                if (fullPurchase == null) return;
+
+                UnsubscribeAllPurchaseItemEvents(NewPurchase);
+                fullPurchase.Items = fullPurchase.Items != null
+                    ? new System.Collections.ObjectModel.ObservableCollection<PurchaseInvoiceItem>(fullPurchase.Items)
+                    : new System.Collections.ObjectModel.ObservableCollection<PurchaseInvoiceItem>();
+                NewPurchase = fullPurchase;
+
+                var targetVendor = Vendors.FirstOrDefault(v =>
+                    (fullPurchase.VendorId.HasValue && fullPurchase.VendorId.Value > 0 && v.Id == fullPurchase.VendorId.Value) ||
+                    (!string.IsNullOrWhiteSpace(fullPurchase.VendorName) && v.Name.Equals(fullPurchase.VendorName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+                SelectedVendor = targetVendor;
+                NewPurchase.VendorId = fullPurchase.VendorId;
+                NewPurchase.VendorName = !string.IsNullOrWhiteSpace(fullPurchase.VendorName) ? fullPurchase.VendorName : (targetVendor?.Name ?? "Direct / Walk-in Purchase (No Vendor)");
+
+                IsReturnMode = fullPurchase.Type == PurchaseType.PurchaseReturn;
+                IsFormVisible = true;
+
+                foreach (var item in NewPurchase.Items)
                 {
-                    if (e.PropertyName == nameof(PurchaseInvoiceItem.Quantity) ||
-                        e.PropertyName == nameof(PurchaseInvoiceItem.Rate) ||
-                        e.PropertyName == nameof(PurchaseInvoiceItem.DiscountPercent) ||
-                        e.PropertyName == nameof(PurchaseInvoiceItem.Item))
+                    var match = AvailableItems.FirstOrDefault(i =>
+                        (item.ItemId > 0 && i.Id == item.ItemId) ||
+                        (!string.IsNullOrWhiteSpace(item.ItemCode) && i.Code.Equals(item.ItemCode.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(item.ItemName) && i.Name.Equals(item.ItemName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+                    if (match != null)
                     {
-                        RecalculateTotals();
+                        item.Item = match;
+                        item.ItemCode = match.Code;
+                        item.ItemName = match.Name;
                     }
-                };
+                    else if (!string.IsNullOrWhiteSpace(item.ItemName))
+                    {
+                        var fallback = new Item { Id = item.ItemId, Code = item.ItemCode ?? "ITM-001", Name = item.ItemName, PurchasePrice = item.Rate, SalePrice = item.Rate };
+                        AvailableItems.Add(fallback);
+                        item.Item = fallback;
+                    }
+
+                    SubscribePurchaseItemEvents(item);
+                }
+                RecalculateTotals();
             }
-            RecalculateTotals();
+            finally
+            {
+                _isRefreshingVendors = false;
+            }
         }
 
         [RelayCommand]
@@ -813,14 +1009,55 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
+        public void SelectCategory(Category? category)
+        {
+            SelectedCategory = category;
+            _ = LoadInventoryAsync();
+        }
+
+        [RelayCommand]
+        public async Task DeleteCategoryAsync(Category? category)
+        {
+            if (category == null || category.Id <= 0) return;
+
+            try
+            {
+                var confirm = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to delete category '{category.Name}'?",
+                    "Confirm Delete Category",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (confirm == System.Windows.MessageBoxResult.Yes)
+                {
+                    await _inventoryService.DeleteCategoryAsync(category.Id);
+                    if (SelectedCategory?.Id == category.Id)
+                    {
+                        SelectedCategory = null;
+                    }
+                    var catList = await _inventoryService.GetCategoriesAsync();
+                    Categories.Clear();
+                    foreach (var c in catList) Categories.Add(c);
+                    await LoadInventoryAsync();
+                    System.Windows.MessageBox.Show($"Category '{category.Name}' deleted successfully.", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.Message, "Cannot Delete Category", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand]
         public async Task LoadInventoryAsync()
         {
-            var list = await _inventoryService.SearchItemsAsync(SearchQuery ?? "");
+            int? catId = SelectedCategory?.Id > 0 ? SelectedCategory.Id : null;
+            var list = await _inventoryService.SearchItemsAsync(SearchQuery ?? "", catId);
 
-            if (SelectedCategory != null && !string.IsNullOrWhiteSpace(SelectedCategory.Name) && !SelectedCategory.Name.Equals("All Categories", StringComparison.OrdinalIgnoreCase))
+            if (catId == null && SelectedCategory != null && !string.IsNullOrWhiteSpace(SelectedCategory.Name) && !SelectedCategory.Name.Equals("All Categories", StringComparison.OrdinalIgnoreCase))
             {
                 var catName = SelectedCategory.Name.Trim().ToLower();
-                list = list.Where(i => (i.CategoryName ?? "").Trim().ToLower().Contains(catName)).ToList();
+                list = list.Where(i => (i.CategoryName ?? "").Trim().ToLower().Equals(catName, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             Items.Clear();
@@ -836,12 +1073,9 @@ namespace AlMadinaERP.Wpf.ViewModels
             TotalValue = list.Sum(i => i.CurrentStock * i.PurchasePrice);
             AvgPurchaseRate = list.Count > 0 ? list.Average(i => i.PurchasePrice) : 0m;
 
-            if (Categories.Count == 0)
-            {
-                var catList = await _inventoryService.GetCategoriesAsync();
-                Categories.Clear();
-                foreach (var c in catList) Categories.Add(c);
-            }
+            var catList = await _inventoryService.GetCategoriesAsync();
+            Categories.Clear();
+            foreach (var c in catList) Categories.Add(c);
 
             if (Units.Count == 0)
             {

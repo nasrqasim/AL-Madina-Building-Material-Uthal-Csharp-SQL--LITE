@@ -422,8 +422,18 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <!-- FOOTER BAR -->
+                        <!-- FOOTER BAR (PURCHASES) -->
                         <Border Background="#0F172A" CornerRadius="6" Padding="12,10" Margin="0,12,0,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <Grid>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="GRAND TOTAL INVOICES: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
@@ -434,6 +444,32 @@
                                     <TextBlock Text="{Binding PostedInvoicesCount}" Foreground="#10B981" FontSize="11" FontWeight="Bold" Margin="4,0,16,0"/>
                                     <TextBlock Text="PAID: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
                                     <TextBlock Text="{Binding PaidInvoicesCount}" Foreground="#10B981" FontSize="11" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- FOOTER BAR (RETURNS) -->
+                        <Border Background="#0F172A" CornerRadius="6" Padding="12,10" Margin="0,12,0,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReturnMode}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="GRAND TOTAL RETURNS: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding TotalReturnsAmount, StringFormat='PKR {0:N2}'}" Foreground="#DC2626" FontSize="13" FontWeight="Bold" Margin="4,0,16,0"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="POSTED: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding PostedReturnsCount}" Foreground="#10B981" FontSize="11" FontWeight="Bold" Margin="4,0,16,0"/>
+                                    <TextBlock Text="DRAFT: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding DraftReturnsCount}" Foreground="#F59E0B" FontSize="11" FontWeight="Bold"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -542,7 +578,7 @@
 
                             <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                 <TextBlock Text="VENDOR" Foreground="#475569" FontSize="10" FontWeight="Bold"/>
-                                <ComboBox ItemsSource="{Binding Vendors}" SelectedItem="{Binding SelectedVendor}" DisplayMemberPath="Name" Text="{Binding NewPurchase.VendorName, UpdateSourceTrigger=PropertyChanged}" IsEditable="True" Height="34" Margin="0,4,0,0"/>
+                                <ComboBox ItemsSource="{Binding Vendors}" SelectedItem="{Binding SelectedVendor}" DisplayMemberPath="Name" Text="{Binding NewPurchase.VendorName, Mode=TwoWay}" IsEditable="True" Height="34" Margin="0,4,0,0"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="6,0,6,0">
@@ -591,6 +627,7 @@
                                         <DataTemplate>
                                             <ComboBox ItemsSource="{Binding DataContext.AvailableItems, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                       SelectedItem="{Binding Item, UpdateSourceTrigger=PropertyChanged}"
+                                                      Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                                       DisplayMemberPath="Name"
                                                       IsEditable="True"
                                                       IsTextSearchEnabled="True"

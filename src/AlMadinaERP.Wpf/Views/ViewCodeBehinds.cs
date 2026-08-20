@@ -56,10 +56,4 @@ namespace AlMadinaERP.Wpf.Views
     {
         public SettingsView() { InitializeComponent(); }
     }
-
-    public partial class CustomerOrdersView : UserControl
-    {
-        public CustomerOrdersView() { InitializeComponent(); }
-    }
 }
-

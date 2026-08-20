@@ -8,19 +8,24 @@ using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class VendorService : IVendorService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public VendorService(AppDbContext context)
+        public VendorService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<string> GetNextVendorCodeAsync()
         {
+            using var _context = CreateContext();
             var lastCode = await _context.Vendors
                 .AsNoTracking()
                 .Where(v => v.Code.StartsWith("VND-"))
@@ -39,6 +44,7 @@ namespace AlMadinaERP.Services
 
         private async Task EnsureVendorCodesAsync()
         {
+            using var _context = CreateContext();
             var unassigned = await _context.Vendors
                 .Where(v => string.IsNullOrEmpty(v.Code))
                 .OrderBy(v => v.Id)
@@ -52,9 +58,9 @@ namespace AlMadinaERP.Services
                     .ToListAsync();
 
                 int maxNum = 0;
-                foreach (var v in codes)
+                foreach (var c in codes)
                 {
-                    if (v.StartsWith("VND-") && int.TryParse(v.Substring(4), out int num))
+                    if (c.StartsWith("VND-") && int.TryParse(c.Substring(4), out int num))
                     {
                         if (num > maxNum) maxNum = num;
                     }
@@ -72,6 +78,7 @@ namespace AlMadinaERP.Services
         public async Task<List<Vendor>> SearchVendorsAsync(string query)
         {
             await EnsureVendorCodesAsync();
+            using var _context = CreateContext();
 
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -94,11 +101,13 @@ namespace AlMadinaERP.Services
 
         public async Task<Vendor?> GetVendorByIdAsync(int id)
         {
+            using var _context = CreateContext();
             return await _context.Vendors.FindAsync(id);
         }
 
         public async Task<Vendor> SaveVendorAsync(Vendor vendor)
         {
+            using var _context = CreateContext();
             if (vendor.Id == 0)
             {
                 if (string.IsNullOrWhiteSpace(vendor.Code))
@@ -119,10 +128,11 @@ namespace AlMadinaERP.Services
 
         public async Task DeleteVendorAsync(int id)
         {
-            var vendor = await _context.Vendors.FindAsync(id);
-            if (vendor != null)
+            using var _context = CreateContext();
+            var vend = await _context.Vendors.FindAsync(id);
+            if (vend != null)
             {
-                vendor.IsActive = false; // Soft delete
+                vend.IsActive = false; // Soft delete
                 await _context.SaveChangesAsync();
             }
         }
@@ -130,6 +140,7 @@ namespace AlMadinaERP.Services
         public async Task<List<VendorBalanceDto>> GetVendorBalancesAsync(string query = "")
         {
             await EnsureVendorCodesAsync();
+            using var _context = CreateContext();
 
             var q = query.Trim().ToLower();
             var vendors = _context.Vendors.Where(v => v.IsActive);
@@ -157,6 +168,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<VendorLedger>> GetVendorLedgerAsync(int vendorId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var query = _context.VendorLedgers
                 .Include(vl => vl.PurchaseInvoice!)
                 .ThenInclude(p => p.Items)
@@ -177,36 +189,37 @@ namespace AlMadinaERP.Services
 
         public async Task<List<VendorPurchasedItemDto>> GetVendorPurchasedItemsAsync(int vendorId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var query = _context.PurchaseInvoices.Where(p => p.VendorId == vendorId);
 
             if (fromDate.HasValue) query = query.Where(p => p.Date >= fromDate.Value);
             if (toDate.HasValue) query = query.Where(p => p.Date <= toDate.Value);
 
-            var invoices = await query
+            var purchases = await query
                 .Include(p => p.Items)
                 .OrderByDescending(p => p.Date)
                 .AsNoTracking()
                 .ToListAsync();
 
             var result = new List<VendorPurchasedItemDto>();
-            foreach (var inv in invoices)
+            foreach (var pur in purchases)
             {
-                foreach (var item in inv.Items)
+                foreach (var item in pur.Items)
                 {
                     result.Add(new VendorPurchasedItemDto
                     {
-                        Date = inv.Date,
-                        PurchaseNumber = inv.PurchaseNumber,
-                        VoucherNumber = inv.VoucherNumber,
+                        Date = pur.Date,
+                        PurchaseNumber = pur.PurchaseNumber,
+                        VoucherNumber = pur.VoucherNumber,
                         ItemCode = item.ItemCode,
                         ItemName = item.ItemName,
                         Quantity = item.Quantity,
                         Unit = item.UnitName,
                         UnitPrice = item.Rate,
                         TotalAmount = item.TotalPrice,
-                        PaidAmount = inv.AmountPaid,
-                        AdvanceUsed = 0m,
-                        OutstandingBalance = inv.BalanceDue
+                        PaidAmount = pur.AmountPaid,
+                        AdvanceUsed = pur.AdvanceUsed,
+                        OutstandingBalance = pur.BalanceDue
                     });
                 }
             }
@@ -215,6 +228,7 @@ namespace AlMadinaERP.Services
 
         public async Task<List<PaymentHistoryDto>> GetVendorReceiptsAndPaymentsAsync(int vendorId, DateTime? fromDate = null, DateTime? toDate = null)
         {
+            using var _context = CreateContext();
             var payments = await _context.Payments
                 .Where(p => p.VendorId == vendorId && p.Status == "Posted")
                 .OrderByDescending(p => p.Date)
@@ -228,7 +242,7 @@ namespace AlMadinaERP.Services
             {
                 Date = p.Date,
                 VoucherNumber = p.PaymentNumber,
-                TransactionType = p.PaymentType.ToString(),
+                TransactionType = p.PaymentCategory,
                 Mode = p.PaymentMethod.ToString(),
                 Amount = p.Amount,
                 ReferenceInvoice = p.PaymentNumber,
@@ -238,8 +252,9 @@ namespace AlMadinaERP.Services
 
         public async Task<List<OutstandingInvoiceDto>> GetVendorOutstandingInvoicesAsync(int vendorId)
         {
+            using var _context = CreateContext();
             var invoices = await _context.PurchaseInvoices
-                .Where(p => p.VendorId == vendorId && (p.TotalAmount - p.AmountPaid) > 0)
+                .Where(p => p.VendorId == vendorId && (p.TotalAmount - p.AmountPaid - p.AdvanceUsed) > 0)
                 .OrderByDescending(p => p.Date)
                 .AsNoTracking()
                 .ToListAsync();
@@ -252,7 +267,7 @@ namespace AlMadinaERP.Services
                 PaymentTerms = inv.PaymentTerms,
                 TotalAmount = inv.TotalAmount,
                 PaidAmount = inv.AmountPaid,
-                AdvanceUsed = 0m,
+                AdvanceUsed = inv.AdvanceUsed,
                 BalanceDue = inv.BalanceDue,
                 Status = inv.BalanceDue > 0 ? "Outstanding" : "Settled"
             }).ToList();

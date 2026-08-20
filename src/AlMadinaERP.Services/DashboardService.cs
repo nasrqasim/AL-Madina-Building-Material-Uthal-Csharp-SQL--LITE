@@ -7,19 +7,24 @@ using AlMadinaERP.Core.Enums;
 using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Data;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace AlMadinaERP.Services
 {
     public class DashboardService : IDashboardService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public DashboardService(AppDbContext context)
+        public DashboardService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
+
+        private AppDbContext CreateContext() => _contextFactory.CreateDbContext();
 
         public async Task<DashboardSummaryDto> GetDashboardSummaryAsync()
         {
+            using var _context = CreateContext();
             try
             {
                 var today = DateTime.Today;

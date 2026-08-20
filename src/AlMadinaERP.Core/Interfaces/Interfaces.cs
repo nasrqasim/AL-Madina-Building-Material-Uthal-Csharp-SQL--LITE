@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AlMadinaERP.Core.DTOs;
 using AlMadinaERP.Core.Models;
+using AlMadinaERP.Core.Enums;
 
 namespace AlMadinaERP.Core.Interfaces
 {
@@ -54,13 +55,14 @@ namespace AlMadinaERP.Core.Interfaces
         Task DeleteItemAsync(int id);
         Task<List<Category>> GetCategoriesAsync();
         Task<Category> SaveCategoryAsync(Category category);
+        Task DeleteCategoryAsync(int id);
         Task<List<Subcategory>> GetSubcategoriesAsync(int? categoryId = null);
         Task<Subcategory> SaveSubcategoryAsync(Subcategory subcategory);
         Task<List<Unit>> GetUnitsAsync();
         Task<Unit> SaveUnitAsync(Unit unit);
         Task<List<LowStockItemDto>> GetLowStockAlertsAsync();
         Task<List<InventoryLedger>> GetInventoryLedgerAsync(int itemId, DateTime? fromDate = null, DateTime? toDate = null);
-        Task<List<InventoryLedger>> GetAllInventoryLedgerAsync(DateTime? fromDate = null, DateTime? toDate = null);
+        Task<List<InventoryLedger>> GetAllInventoryLedgerAsync(string searchQuery = "", DateTime? fromDate = null, DateTime? toDate = null);
     }
 
     public interface ISaleService
@@ -78,7 +80,7 @@ namespace AlMadinaERP.Core.Interfaces
         Task<PurchaseInvoice> CreatePurchaseInvoiceAsync(PurchaseInvoice invoice);
         Task<PurchaseInvoice> SavePurchaseInvoiceAsync(PurchaseInvoice invoice);
         Task<PurchaseInvoice?> GetPurchaseInvoiceByIdAsync(int id);
-        Task<List<PurchaseInvoice>> SearchPurchasesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<List<PurchaseInvoice>> SearchPurchasesAsync(string query, DateTime? fromDate = null, DateTime? toDate = null, PurchaseType? type = null);
         Task DeletePurchaseInvoiceAsync(int id);
         Task<string> GenerateNextPurchaseNumberAsync();
     }
@@ -141,17 +143,17 @@ namespace AlMadinaERP.Core.Interfaces
         void PrintInventoryLedger(Item item, IEnumerable<InventoryLedger> entries, CompanySetting company);
         void PrintStaffLedger(Staff staff, IEnumerable<SalaryLedgerRowDto> entries, CompanySetting company);
         void PrintSalaryStaffRegister(IEnumerable<Staff> staffs, CompanySetting company);
-        void PrintReportTable(string title, IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows, IEnumerable<string>? totalsRow, CompanySetting company);
         void PrintCustomerOrder(CustomerOrder order, CompanySetting company);
+        void PrintReportTable(string title, IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows, IEnumerable<string>? totalsRow, CompanySetting company);
     }
 
     public interface ICustomerOrderService
     {
         Task<List<CustomerOrder>> GetCustomerOrdersAsync(string searchQuery = "", string statusFilter = "All");
         Task<CustomerOrder?> GetCustomerOrderByIdAsync(int id);
+        Task<string> GenerateNextOrderNumberAsync();
         Task<CustomerOrder> SaveCustomerOrderAsync(CustomerOrder order);
         Task DeleteCustomerOrderAsync(int id);
-        Task<string> GenerateNextOrderNumberAsync();
         Task<CustomerOrder?> ToggleOrderStatusAsync(int id);
     }
 

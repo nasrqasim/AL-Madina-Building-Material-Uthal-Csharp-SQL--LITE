@@ -90,7 +90,7 @@
                             <!-- PASSWORD INPUT WITH SHOW/HIDE TOGGLE -->
                             <DockPanel Margin="0,0,0,6">
                                 <TextBlock Text="Password *" Foreground="#475569" FontSize="11" FontWeight="Bold"/>
-                                <Button Command="{Binding TogglePasswordVisibilityCommand}" Content="{Binding IsPasswordVisible, Converter={StaticResource BooleanToVisibilityConverter}}" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                                <Button Click="TogglePasswordVisibility_Click" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Cursor="Hand">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Content" Value="👁️ Show Password"/>
@@ -127,7 +127,7 @@
                                     </PasswordBox>
 
                                     <!-- TextBox when Visible -->
-                                    <TextBox Grid.Column="1" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="6,8" BorderThickness="0" Background="Transparent" VerticalAlignment="Center">
+                                    <TextBox x:Name="TxtVisiblePasswordBox" Grid.Column="1" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="6,8" BorderThickness="0" Background="Transparent" VerticalAlignment="Center">
                                         <TextBox.Style>
                                             <Style TargetType="TextBox">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -146,7 +146,7 @@
                             <TextBlock Text="{Binding ErrorMessage}" Foreground="#DC2626" FontSize="12" FontWeight="Bold" Margin="0,0,0,16" TextWrapping="Wrap" Visibility="{Binding ErrorMessage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                             <!-- LOGIN BUTTON -->
-                            <Button Command="{Binding LoginCommand}" CommandParameter="{Binding ElementName=LoginWin}" IsDefault="True" Content="SIGN IN TO ERP" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" Padding="16,12" Cursor="Hand">
+                            <Button Click="BtnLogin_Click" Command="{Binding LoginCommand}" CommandParameter="{Binding ElementName=LoginWin}" IsDefault="True" Content="SIGN IN TO ERP" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" Padding="16,12" Cursor="Hand">
                                 <Button.Resources>
                                     <Style TargetType="Border">
                                         <Setter Property="CornerRadius" Value="6"/>
