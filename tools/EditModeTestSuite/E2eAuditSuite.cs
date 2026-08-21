@@ -975,10 +975,120 @@ namespace EditModeTestSuite
                     var bDb = await db.Banks.FindAsync(bank.Id);
                     AssertTrue("Bank Balance Integrity", bDb?.CurrentBalance == 42000, $"HBL Balance: {bDb?.CurrentBalance}");
                 }
+
+                // Create dedicated test bank, customer, and vendor for isolated history testing
+                var historyBank = new Bank { BankName = "Test History Bank", AccountNumber = "THB-123", AccountName = "History Test Account", CurrentBalance = 50000 };
+                historyBank = await _receiptPaymentService.SaveBankAsync(historyBank);
+
+                var historyCustomer = new Customer { Name = "History Test Customer", Phone = "0300-1111111", OwesAmount = 100000 };
+                historyCustomer = await _customerService.SaveCustomerAsync(historyCustomer);
+
+                var historyVendor = new Vendor { Name = "History Test Vendor", Phone = "0300-2222222", OwesAmount = 100000 };
+                historyVendor = await _vendorService.SaveVendorAsync(historyVendor);
+
+                // 1. Create a bank receipt (PKR 20,000)
+                var r2 = new Receipt
+                {
+                    Amount = 20000,
+                    BankId = historyBank.Id,
+                    PaymentMethod = PaymentMethod.Bank,
+                    Date = DateTime.Today.AddDays(-2),
+                    CustomerId = historyCustomer.Id,
+                    CustomerName = historyCustomer.Name,
+                    ReceiptType = ReceiptType.BankReceipt,
+                    Status = "Posted",
+                    Remarks = "Test Bank Receipt"
+                };
+                await _receiptPaymentService.ProcessReceiptAsync(r2);
+
+                using (var db = _factory.CreateDbContext())
+                {
+                    var bDb = await db.Banks.FindAsync(historyBank.Id);
+                    AssertTrue("Create Bank Receipt balance update", bDb?.CurrentBalance == 70000, $"New Balance: {bDb?.CurrentBalance} (Expected 70000)");
+                }
+
+                // 2. Edit that receipt: change amount from 20,000 to 25,000
+                r2.Amount = 25000;
+                await _receiptPaymentService.ProcessReceiptAsync(r2);
+
+                using (var db = _factory.CreateDbContext())
+                {
+                    var bDb = await db.Banks.FindAsync(historyBank.Id);
+                    AssertTrue("Edit Bank Receipt balance update (rollback and apply)", bDb?.CurrentBalance == 75000, $"Edited Balance: {bDb?.CurrentBalance} (Expected 75000)");
+
+                    // Verify customer ledgers count is exactly 1 (reverted/deleted old one, added new one)
+                    var ledgersCount = await db.CustomerLedgers.CountAsync(cl => cl.CustomerId == historyCustomer.Id && (cl.VoucherNumber == r2.ReceiptNumber));
+                    AssertTrue("Duplicate Ledger Entry prevention on Edit", ledgersCount == 1, $"Ledger count: {ledgersCount} (Expected 1)");
+                }
+
+                // 3. Add a bank payment (PKR 10,000)
+                var p2 = new Payment
+                {
+                    Amount = 10000,
+                    BankId = historyBank.Id,
+                    PaymentMethod = PaymentMethod.Bank,
+                    Date = DateTime.Today.AddDays(-1),
+                    VendorId = historyVendor.Id,
+                    VendorName = historyVendor.Name,
+                    PaymentType = PaymentType.BankPayment,
+                    Status = "Posted",
+                    Narration = "Test Bank Payment"
+                };
+                await _receiptPaymentService.ProcessPaymentAsync(p2);
+
+                using (var db = _factory.CreateDbContext())
+                {
+                    var bDb = await db.Banks.FindAsync(historyBank.Id);
+                    AssertTrue("Create Bank Payment balance update", bDb?.CurrentBalance == 65000, $"After Payment Balance: {bDb?.CurrentBalance} (Expected 65000)");
+                }
+
+                // 4. Add a bank expense (PKR 5,000)
+                var e2 = new Expense
+                {
+                    Amount = 5000,
+                    BankId = historyBank.Id,
+                    PaymentMethod = PaymentMethod.Bank,
+                    Date = DateTime.Today,
+                    Status = "Paid",
+                    Title = "Internet Bill",
+                    Description = "Bank expense test"
+                };
+                await _receiptPaymentService.ProcessExpenseAsync(e2);
+
+                using (var db = _factory.CreateDbContext())
+                {
+                    var bDb = await db.Banks.FindAsync(historyBank.Id);
+                    AssertTrue("Create Bank Expense balance update", bDb?.CurrentBalance == 60000, $"After Expense Balance: {bDb?.CurrentBalance} (Expected 60000)");
+                }
+
+                // 5. Test BanksViewModel history loader
+                var bankRepo = new Repository<Bank>(_factory);
+                var vm = new BanksViewModel(_receiptPaymentService, null!, _companyRepo, bankRepo, _factory);
+                
+                vm.ViewBankHistory(historyBank);
+                await vm.LoadBankHistoryAsync();
+
+                AssertTrue("Bank History Transactions count", vm.BankHistoryTransactions.Count == 3, $"Transactions count: {vm.BankHistoryTransactions.Count} (Expected 3)");
+
+                // Verify sorting: newest date first (Internet Bill is today, Bank Payment is yesterday, HBL receipt is 2 days ago, etc.)
+                var sortedTxns = vm.BankHistoryTransactions.ToList();
+                AssertTrue("Bank History chronologically sorted (newest first)", sortedTxns[0].TransactionType == "Bank Expense" && sortedTxns[1].TransactionType == "Bank Payment", "Order matches dates.");
+
+                // Verify running balances: the last transaction (index 0 because it's sorted descending) must match current balance (60,000)
+                AssertTrue("Bank History running balance matches", sortedTxns[0].RunningBalance == 60000, $"Newest running balance: {sortedTxns[0].RunningBalance} (Expected 60000)");
+
+                // Test Date Range Filter (Yesterday to Today covers payment and expense, receipt is excluded)
+                vm.HistoryFromDate = DateTime.Today.AddDays(-1);
+                vm.HistoryToDate = DateTime.Today;
+                await vm.LoadBankHistoryAsync();
+
+                AssertTrue("Bank History Date-range filter count", vm.BankHistoryTransactions.Count == 2, $"Range count: {vm.BankHistoryTransactions.Count} (Expected 2)");
+                AssertTrue("Bank History Opening Balance for range", vm.BankHistoryOpeningBalance == 75000, $"Opening: {vm.BankHistoryOpeningBalance} (Expected 75000)");
+                AssertTrue("Bank History Closing Balance for range", vm.BankHistoryClosingBalance == 60000, $"Closing: {vm.BankHistoryClosingBalance} (Expected 60000)");
             }
             catch (Exception ex)
             {
-                AssertTrue("Banks Flow", false, $"Failed: {ex.Message}");
+                AssertTrue("Banks Flow", false, $"Failed: {ex.Message} - {ex.StackTrace}");
             }
 
             // -------------------------------------------------------------------

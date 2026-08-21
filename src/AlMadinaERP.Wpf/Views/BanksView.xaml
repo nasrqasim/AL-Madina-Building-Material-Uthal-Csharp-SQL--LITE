@@ -57,11 +57,12 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTemplateColumn Header="ACTIONS" Width="110">
+                            <DataGridTemplateColumn Header="ACTIONS" Width="150">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <Button Content="👁️" Command="{Binding DataContext.ViewBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand" ToolTip="View Bank Details"/>
+                                            <Button Content="📜" Command="{Binding DataContext.ViewBankHistoryCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#F0FDF4" Foreground="#16A34A" BorderBrush="#BBF7D0" BorderThickness="1" Cursor="Hand" ToolTip="View Transaction History"/>
                                             <Button Content="✏️" Command="{Binding DataContext.EditBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#BFDBFE" BorderThickness="1" Cursor="Hand" ToolTip="Edit Bank Account"/>
                                             <Button Content="🗑️" Command="{Binding DataContext.DeleteBankCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Padding="4,2" Margin="2" Background="#FEF2F2" Foreground="#DC2626" BorderBrush="#FECDD3" BorderThickness="1" Cursor="Hand" ToolTip="Delete Bank Account"/>
                                         </StackPanel>
@@ -256,6 +257,103 @@
 
                     <Button Command="{Binding CloseViewBankModalCommand}" Content="Close" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="20,8" HorizontalAlignment="Right" Cursor="Hand"/>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- BANK TRANSACTION HISTORY MODAL DIALOG -->
+        <Grid Background="#80000000" Visibility="{Binding IsBankHistoryModalOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Border Background="#FFFFFF" CornerRadius="12" Width="900" Height="680" VerticalAlignment="Center" Padding="20" BorderBrush="#CBD5E1" BorderThickness="1">
+                <DockPanel>
+                    <!-- Header -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Bank Transaction History - " Foreground="#0F172A" FontSize="18" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding SelectedBankForHistory.BankName}" Foreground="#7A0C0C" FontSize="18" FontWeight="Bold"/>
+                        </StackPanel>
+                        <Button Command="{Binding CloseBankHistoryModalCommand}" Content="✕" Background="Transparent" Foreground="#64748B" FontSize="16" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4,0" Cursor="Hand"/>
+                    </Grid>
+
+                    <!-- Date Filter & Actions Bar -->
+                    <Border DockPanel.Dock="Top" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="From:" VerticalAlignment="Center" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding HistoryFromDate, UpdateSourceTrigger=PropertyChanged}" Width="130" Height="28"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                                <TextBlock Text="To:" VerticalAlignment="Center" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                <DatePicker SelectedDate="{Binding HistoryToDate, UpdateSourceTrigger=PropertyChanged}" Width="130" Height="28"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                                <Button Content="🔍 Filter" Command="{Binding LoadBankHistoryCommand}" Background="#0F172A" Foreground="#FFFFFF" Padding="12,4" Margin="0,0,8,0" Cursor="Hand" FontWeight="SemiBold"/>
+                                <Button Content="🔄 Reset" Command="{Binding ResetHistoryFiltersCommand}" Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Padding="12,4" Cursor="Hand"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="3" Content="🖨️ Print Ledger" Command="{Binding PrintBankHistoryLedgerCommand}" Background="#7A0C0C" Foreground="#FFFFFF" FontWeight="Bold" Padding="16,6" Cursor="Hand"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Summary Info Bar -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="#EFF6FF" CornerRadius="6" Padding="10,6" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="Opening Balance: " Foreground="#1E3A8A" FontSize="11" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding BankHistoryOpeningBalance, StringFormat='Rs. {0:N2}'}" Foreground="#1E40AF" FontSize="11" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="#ECFDF5" CornerRadius="6" Padding="10,6" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="Closing Balance: " Foreground="#064E3B" FontSize="11" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding BankHistoryClosingBalance, StringFormat='Rs. {0:N2}'}" Foreground="#047857" FontSize="11" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="#F0FDF4" CornerRadius="6" Padding="10,6">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="Account No: " Foreground="#064E3B" FontSize="11" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SelectedBankForHistory.AccountNumber}" Foreground="#047857" FontSize="11" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Close Button in DockPanel Bottom -->
+                    <Button DockPanel.Dock="Bottom" Command="{Binding CloseBankHistoryModalCommand}" Content="Close" Background="#64748B" Foreground="#FFFFFF" FontWeight="Bold" Padding="20,8" HorizontalAlignment="Right" Margin="0,12,0,0" Cursor="Hand"/>
+
+                    <!-- DataGrid -->
+                    <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8">
+                        <DataGrid ItemsSource="{Binding BankHistoryTransactions}" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC" Foreground="#0F172A" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="DATE" Binding="{Binding Date, StringFormat='dd-MM-yyyy'}" Width="100"/>
+                                <DataGridTextColumn Header="VOUCHER NO" Binding="{Binding VoucherNumber}" Width="120" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="TRANSACTION TYPE" Binding="{Binding TransactionType}" Width="130"/>
+                                <DataGridTextColumn Header="PARTY NAME" Binding="{Binding PartyName}" Width="150" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="AMOUNT (PKR)" Binding="{Binding DisplayAmount}" Width="120" FontWeight="Bold">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{Binding AmountColor}"/>
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="RUNNING BALANCE" Binding="{Binding RunningBalance, StringFormat='Rs. {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#1E3A8A"/>
+                                <DataGridTextColumn Header="NARRATION" Binding="{Binding Narration}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </DockPanel>
             </Border>
         </Grid>
     </Grid>

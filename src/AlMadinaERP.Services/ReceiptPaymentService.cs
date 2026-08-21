@@ -42,6 +42,63 @@ namespace AlMadinaERP.Services
                     receipt.Date = DateTime.Now;
                 }
 
+                // If editing (Id > 0), revert original receipt values first to ensure double-entry integrity
+                if (receipt.Id > 0)
+                {
+                    var original = await _context.Receipts.AsNoTracking().FirstOrDefaultAsync(r => r.Id == receipt.Id);
+                    if (original != null)
+                    {
+                        // 1. Revert original Bank balance
+                        if (original.PaymentMethod == PaymentMethod.Bank && original.BankId.HasValue)
+                        {
+                            var bank = await _context.Banks.FindAsync(original.BankId.Value);
+                            if (bank != null)
+                            {
+                                bank.CurrentBalance -= original.Amount;
+                                _context.Banks.Update(bank);
+                            }
+                        }
+
+                        // 2. Revert original Customer balance
+                        if (original.CustomerId.HasValue && original.CustomerId.Value > 0)
+                        {
+                            var customer = await _context.Customers.FindAsync(original.CustomerId.Value);
+                            if (customer != null)
+                            {
+                                if (original.IsAdvance)
+                                {
+                                    if (customer.AdvanceAvailable >= original.Amount)
+                                    {
+                                        customer.AdvanceAvailable -= original.Amount;
+                                    }
+                                    else
+                                    {
+                                        var rem = original.Amount - customer.AdvanceAvailable;
+                                        customer.AdvanceAvailable = 0;
+                                        customer.OwesAmount += rem;
+                                    }
+                                }
+                                else
+                                {
+                                    customer.OwesAmount += original.Amount;
+                                }
+                                _context.Customers.Update(customer);
+                            }
+
+                            // Remove old customer ledger entry for this receipt to prevent duplicates
+                            var ledgers = await _context.CustomerLedgers
+                                .Where(cl => cl.CustomerId == original.CustomerId.Value && 
+                                            (cl.VoucherNumber == original.ReceiptNumber || 
+                                             cl.VoucherNumber == receipt.ReceiptNumber))
+                                .ToListAsync();
+                            if (ledgers.Any())
+                            {
+                                _context.CustomerLedgers.RemoveRange(ledgers);
+                            }
+                        }
+                    }
+                }
+
                 // Handle Bank Balance
                 if (receipt.PaymentMethod == PaymentMethod.Bank && receipt.BankId.HasValue)
                 {
@@ -150,6 +207,94 @@ namespace AlMadinaERP.Services
                 if (string.IsNullOrWhiteSpace(payment.Remarks))
                 {
                     payment.Remarks = payment.Narration ?? "";
+                }
+
+                // If editing (Id > 0), revert original payment values first to ensure double-entry integrity
+                if (payment.Id > 0)
+                {
+                    var original = await _context.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.Id == payment.Id);
+                    if (original != null)
+                    {
+                        // 1. Revert original Bank balance
+                        if (original.PaymentMethod == PaymentMethod.Bank && original.BankId.HasValue)
+                        {
+                            var bank = await _context.Banks.FindAsync(original.BankId.Value);
+                            if (bank != null)
+                            {
+                                bank.CurrentBalance += original.Amount;
+                                _context.Banks.Update(bank);
+                            }
+                        }
+
+                        // 2. Revert original Vendor balance
+                        if (original.VendorId.HasValue && original.VendorId.Value > 0)
+                        {
+                            var vendor = await _context.Vendors.FindAsync(original.VendorId.Value);
+                            if (vendor != null)
+                            {
+                                if (original.IsAdvance)
+                                {
+                                    if (vendor.AdvanceAvailable >= original.Amount)
+                                    {
+                                        vendor.AdvanceAvailable -= original.Amount;
+                                    }
+                                    else
+                                    {
+                                        var rem = original.Amount - vendor.AdvanceAvailable;
+                                        vendor.AdvanceAvailable = 0;
+                                        vendor.OwesAmount += rem;
+                                    }
+                                }
+                                else
+                                {
+                                    vendor.OwesAmount += original.Amount;
+                                }
+                                _context.Vendors.Update(vendor);
+                            }
+
+                            // Remove old vendor ledger entry for this payment to prevent duplicates
+                            var ledgers = await _context.VendorLedgers
+                                .Where(vl => vl.VendorId == original.VendorId.Value && 
+                                            (vl.VoucherNumber == original.PaymentNumber || 
+                                             vl.VoucherNumber == payment.PaymentNumber))
+                                .ToListAsync();
+                            if (ledgers.Any())
+                            {
+                                _context.VendorLedgers.RemoveRange(ledgers);
+                            }
+                        }
+
+                        // 3. Revert original Customer balance (if customer payment)
+                        if (original.CustomerId.HasValue && original.CustomerId.Value > 0)
+                        {
+                            var customer = await _context.Customers.FindAsync(original.CustomerId.Value);
+                            if (customer != null)
+                            {
+                                if (customer.OwesAmount >= original.Amount)
+                                {
+                                    customer.OwesAmount -= original.Amount;
+                                }
+                                else
+                                {
+                                    var rem = original.Amount - customer.OwesAmount;
+                                    customer.OwesAmount = 0;
+                                    customer.AdvanceAvailable += rem;
+                                }
+                                _context.Customers.Update(customer);
+                            }
+
+                            // Remove old customer ledger entry for this payment to prevent duplicates
+                            var ledgers = await _context.CustomerLedgers
+                                .Where(cl => cl.CustomerId == original.CustomerId.Value && 
+                                            (cl.VoucherNumber == original.PaymentNumber || 
+                                             cl.VoucherNumber == payment.PaymentNumber))
+                                .ToListAsync();
+                            if (ledgers.Any())
+                            {
+                                _context.CustomerLedgers.RemoveRange(ledgers);
+                            }
+                        }
+                    }
                 }
 
                 // Handle Bank Balance

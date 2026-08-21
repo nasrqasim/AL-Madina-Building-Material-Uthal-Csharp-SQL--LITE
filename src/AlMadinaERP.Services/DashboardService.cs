@@ -62,7 +62,7 @@ namespace AlMadinaERP.Services
                     .SumAsync(p => (double?)p.TotalAmount) ?? 0);
 
                 var cashReceipts = (decimal)(await _context.Receipts
-                    .Where(r => r.PaymentMethod == PaymentMethod.Cash || r.PaymentMethod == PaymentMethod.Bank)
+                    .Where(r => r.PaymentMethod == PaymentMethod.Cash)
                     .AsNoTracking()
                     .SumAsync(r => (double?)r.Amount) ?? 0);
 
@@ -72,10 +72,12 @@ namespace AlMadinaERP.Services
                     .SumAsync(b => (double?)b.CurrentBalance) ?? 0);
 
                 var cashPayments = (decimal)(await _context.Payments
+                    .Where(p => p.PaymentMethod == PaymentMethod.Cash)
                     .AsNoTracking()
                     .SumAsync(p => (double?)p.Amount) ?? 0);
 
                 var expenses = (decimal)(await _context.Expenses
+                    .Where(e => e.PaymentMethod == PaymentMethod.Cash)
                     .AsNoTracking()
                     .SumAsync(e => (double?)e.Amount) ?? 0);
 

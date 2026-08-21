@@ -510,7 +510,6 @@ namespace AlMadinaERP.Wpf.ViewModels
             NewReceipt.Status = "Posted";
             await SaveReceiptInternalAsync();
         }
-
         private async Task SaveReceiptInternalAsync()
         {
             if (string.IsNullOrWhiteSpace(NewReceipt.ReceiptNumber))
@@ -518,36 +517,60 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewReceipt.ReceiptNumber = "RCT-" + DateTime.Now.ToString("fffSSm");
             }
 
-            if (SelectedCustomer != null)
+            // Resolve Customer first if it can be found by name/id
+            if (SelectedCustomer == null)
             {
-                NewReceipt.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
-                NewReceipt.CustomerName = SelectedCustomer.Name;
-            }
-            else if (NewReceipt.CustomerId.HasValue && NewReceipt.CustomerId.Value > 0)
-            {
-                var cust = Customers.FirstOrDefault(c => c.Id == NewReceipt.CustomerId.Value);
-                if (cust != null)
+                if (NewReceipt.CustomerId.HasValue && NewReceipt.CustomerId.Value > 0)
                 {
-                    SelectedCustomer = cust;
-                    NewReceipt.CustomerName = cust.Name;
+                    SelectedCustomer = Customers.FirstOrDefault(c => c.Id == NewReceipt.CustomerId.Value);
                 }
-            }
-            else if (!string.IsNullOrWhiteSpace(NewReceipt.CustomerName))
-            {
-                var cust = Customers.FirstOrDefault(c => c.Name.Equals(NewReceipt.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
-                if (cust != null)
+                else if (!string.IsNullOrWhiteSpace(NewReceipt.CustomerName))
                 {
-                    SelectedCustomer = cust;
-                    NewReceipt.CustomerId = cust.Id;
-                    NewReceipt.CustomerName = cust.Name;
+                    SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(NewReceipt.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
                 }
             }
 
-            if (SelectedBank != null)
+            if (SelectedCustomer == null)
             {
+                System.Windows.MessageBox.Show("Please select a valid Customer from the list.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            NewReceipt.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
+            NewReceipt.CustomerName = SelectedCustomer.Name;
+
+            // Resolve Bank if BankReceiptForm
+            if (ActiveSubView == "BankReceiptForm")
+            {
+                if (SelectedBank == null)
+                {
+                    if (NewReceipt.BankId.HasValue && NewReceipt.BankId.Value > 0)
+                    {
+                        SelectedBank = Banks.FirstOrDefault(b => b.Id == NewReceipt.BankId.Value);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(NewReceipt.BankName))
+                    {
+                        SelectedBank = Banks.FirstOrDefault(b => b.BankName.Equals(NewReceipt.BankName.Trim(), StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+
+                if (SelectedBank == null)
+                {
+                    System.Windows.MessageBox.Show("Please select a valid Bank Account from the list.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
                 NewReceipt.BankId = SelectedBank.Id > 0 ? SelectedBank.Id : null;
                 NewReceipt.BankName = SelectedBank.BankName;
                 NewReceipt.BankAccountNo = SelectedBank.AccountNumber;
+                NewReceipt.PaymentMethod = PaymentMethod.Bank;
+            }
+            else
+            {
+                NewReceipt.BankId = null;
+                NewReceipt.BankName = string.Empty;
+                NewReceipt.BankAccountNo = string.Empty;
+                NewReceipt.PaymentMethod = PaymentMethod.Cash;
             }
 
             await _service.ProcessReceiptAsync(NewReceipt);
@@ -576,70 +599,92 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewPayment.PaymentNumber = "PAY-" + DateTime.Now.ToString("fffSSm");
             }
 
+            // Resolve Vendor/Customer
             if (IsVendorPayment)
             {
                 NewPayment.PayToCategory = "Vendor";
                 NewPayment.CustomerId = null;
-                if (SelectedVendor != null)
+
+                if (SelectedVendor == null)
                 {
-                    NewPayment.VendorId = SelectedVendor.Id > 0 ? SelectedVendor.Id : null;
-                    NewPayment.VendorName = SelectedVendor.Name;
-                }
-                else if (NewPayment.VendorId.HasValue && NewPayment.VendorId.Value > 0)
-                {
-                    var vend = Vendors.FirstOrDefault(v => v.Id == NewPayment.VendorId.Value);
-                    if (vend != null)
+                    if (NewPayment.VendorId.HasValue && NewPayment.VendorId.Value > 0)
                     {
-                        SelectedVendor = vend;
-                        NewPayment.VendorName = vend.Name;
+                        SelectedVendor = Vendors.FirstOrDefault(v => v.Id == NewPayment.VendorId.Value);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(NewPayment.VendorName))
+                    {
+                        SelectedVendor = Vendors.FirstOrDefault(v => v.Name.Equals(NewPayment.VendorName.Trim(), StringComparison.OrdinalIgnoreCase));
                     }
                 }
-                else if (!string.IsNullOrWhiteSpace(NewPayment.VendorName))
+
+                if (SelectedVendor == null)
                 {
-                    var vend = Vendors.FirstOrDefault(v => v.Name.Equals(NewPayment.VendorName.Trim(), StringComparison.OrdinalIgnoreCase));
-                    if (vend != null)
-                    {
-                        SelectedVendor = vend;
-                        NewPayment.VendorId = vend.Id;
-                        NewPayment.VendorName = vend.Name;
-                    }
+                    System.Windows.MessageBox.Show("Please select a valid Vendor from the list.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
                 }
+
+                NewPayment.VendorId = SelectedVendor.Id > 0 ? SelectedVendor.Id : null;
+                NewPayment.VendorName = SelectedVendor.Name;
             }
             else
             {
                 NewPayment.PayToCategory = "Customer";
                 NewPayment.VendorId = null;
-                if (SelectedCustomer != null)
+
+                if (SelectedCustomer == null)
                 {
-                    NewPayment.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
-                    NewPayment.CustomerName = SelectedCustomer.Name;
-                }
-                else if (NewPayment.CustomerId.HasValue && NewPayment.CustomerId.Value > 0)
-                {
-                    var cust = Customers.FirstOrDefault(c => c.Id == NewPayment.CustomerId.Value);
-                    if (cust != null)
+                    if (NewPayment.CustomerId.HasValue && NewPayment.CustomerId.Value > 0)
                     {
-                        SelectedCustomer = cust;
-                        NewPayment.CustomerName = cust.Name;
+                        SelectedCustomer = Customers.FirstOrDefault(c => c.Id == NewPayment.CustomerId.Value);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(NewPayment.CustomerName))
+                    {
+                        SelectedCustomer = Customers.FirstOrDefault(c => c.Name.Equals(NewPayment.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
                     }
                 }
-                else if (!string.IsNullOrWhiteSpace(NewPayment.CustomerName))
+
+                if (SelectedCustomer == null)
                 {
-                    var cust = Customers.FirstOrDefault(c => c.Name.Equals(NewPayment.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase));
-                    if (cust != null)
-                    {
-                        SelectedCustomer = cust;
-                        NewPayment.CustomerId = cust.Id;
-                        NewPayment.CustomerName = cust.Name;
-                    }
+                    System.Windows.MessageBox.Show("Please select a valid Customer from the list.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
                 }
+
+                NewPayment.CustomerId = SelectedCustomer.Id > 0 ? SelectedCustomer.Id : null;
+                NewPayment.CustomerName = SelectedCustomer.Name;
             }
 
-            if (SelectedBank != null)
+            // Resolve Bank if BankPaymentForm
+            if (ActiveSubView == "BankPaymentForm")
             {
+                if (SelectedBank == null)
+                {
+                    if (NewPayment.BankId.HasValue && NewPayment.BankId.Value > 0)
+                    {
+                        SelectedBank = Banks.FirstOrDefault(b => b.Id == NewPayment.BankId.Value);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(NewPayment.BankName))
+                    {
+                        SelectedBank = Banks.FirstOrDefault(b => b.BankName.Equals(NewPayment.BankName.Trim(), StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+
+                if (SelectedBank == null)
+                {
+                    System.Windows.MessageBox.Show("Please select a valid Bank Account from the list.", "Validation Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
                 NewPayment.BankId = SelectedBank.Id > 0 ? SelectedBank.Id : null;
                 NewPayment.BankName = SelectedBank.BankName;
                 NewPayment.BankAccountNo = SelectedBank.AccountNumber;
+                NewPayment.PaymentMethod = PaymentMethod.Bank;
+            }
+            else
+            {
+                NewPayment.BankId = null;
+                NewPayment.BankName = string.Empty;
+                NewPayment.BankAccountNo = string.Empty;
+                NewPayment.PaymentMethod = PaymentMethod.Cash;
             }
 
             NewPayment.WhtAmount = (NewPayment.Amount * NewPayment.WhtRatePercent) / 100m;
@@ -649,7 +694,6 @@ namespace AlMadinaERP.Wpf.ViewModels
             CloseSubView();
             await LoadDataAsync();
         }
-
         [RelayCommand]
         public void OpenAddOtherIncomeModal()
         {

@@ -1,11 +1,15 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using AlMadinaERP.Core.DTOs;
+using AlMadinaERP.Core.Enums;
 using AlMadinaERP.Core.Interfaces;
 using AlMadinaERP.Core.Models;
+using AlMadinaERP.Data;
 
 namespace AlMadinaERP.Wpf.ViewModels
 {
@@ -389,6 +393,7 @@ namespace AlMadinaERP.Wpf.ViewModels
         private readonly IPrintService _printService;
         private readonly IRepository<CompanySetting> _companyRepo;
         private readonly IRepository<Bank> _bankRepo;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         [ObservableProperty]
         private ObservableCollection<Bank> _banks = new();
@@ -413,12 +418,39 @@ namespace AlMadinaERP.Wpf.ViewModels
             _ = LoadBanksAsync();
         }
 
-        public BanksViewModel(IReceiptPaymentService service, IPrintService printService, IRepository<CompanySetting> companyRepo, IRepository<Bank> bankRepo)
+        [ObservableProperty]
+        private Bank? _selectedBankForHistory;
+
+        [ObservableProperty]
+        private bool _isBankHistoryModalOpen;
+
+        [ObservableProperty]
+        private DateTime _historyFromDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+        [ObservableProperty]
+        private DateTime _historyToDate = DateTime.Today;
+
+        [ObservableProperty]
+        private decimal _bankHistoryOpeningBalance;
+
+        [ObservableProperty]
+        private decimal _bankHistoryClosingBalance;
+
+        [ObservableProperty]
+        private ObservableCollection<BankHistoryTransaction> _bankHistoryTransactions = new();
+
+        public BanksViewModel(
+            IReceiptPaymentService service,
+            IPrintService printService,
+            IRepository<CompanySetting> companyRepo,
+            IRepository<Bank> bankRepo,
+            IDbContextFactory<AppDbContext> contextFactory)
         {
             _service = service;
             _printService = printService;
             _companyRepo = companyRepo;
             _bankRepo = bankRepo;
+            _contextFactory = contextFactory;
         }
 
         [ObservableProperty]
@@ -529,5 +561,194 @@ namespace AlMadinaERP.Wpf.ViewModels
             var totals = new[] { "TOTAL", $"{Banks.Count} Bank Accounts", "", "", "", $"Total: Rs. {Banks.Sum(b => b.CurrentBalance):N2}" };
             _printService.PrintReportTable("Bank Accounts Directory", headers, rows, totals, company);
         }
+
+        [RelayCommand]
+        public void ViewBankHistory(Bank bank)
+        {
+            if (bank == null) return;
+            SelectedBankForHistory = bank;
+            
+            // Set default date range to current month
+            HistoryFromDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            HistoryToDate = DateTime.Today;
+
+            IsBankHistoryModalOpen = true;
+            _ = LoadBankHistoryAsync();
+        }
+
+        [RelayCommand]
+        public void CloseBankHistoryModal()
+        {
+            IsBankHistoryModalOpen = false;
+        }
+
+        [RelayCommand]
+        public void ResetHistoryFilters()
+        {
+            HistoryFromDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            HistoryToDate = DateTime.Today;
+            _ = LoadBankHistoryAsync();
+        }
+
+        [RelayCommand]
+        public async Task LoadBankHistoryAsync()
+        {
+            if (SelectedBankForHistory == null) return;
+
+            var bankId = SelectedBankForHistory.Id;
+
+            using (var db = _contextFactory.CreateDbContext())
+            {
+                // 1. Fetch all Receipts, Payments, and Expenses for this bank
+                var receipts = await db.Receipts
+                    .Where(r => r.BankId == bankId && r.PaymentMethod == PaymentMethod.Bank && r.Status == "Posted")
+                    .Select(r => new BankHistoryTransaction
+                    {
+                        Date = r.Date,
+                        VoucherNumber = r.ReceiptNumber,
+                        TransactionType = "Bank Receipt",
+                        BankName = SelectedBankForHistory.BankName,
+                        PartyName = r.CustomerName ?? "Cash Customer",
+                        Amount = r.Amount,
+                        Narration = r.Remarks ?? ""
+                    })
+                    .ToListAsync();
+
+                var payments = await db.Payments
+                    .Where(p => p.BankId == bankId && p.PaymentMethod == PaymentMethod.Bank && p.Status == "Posted")
+                    .Select(p => new BankHistoryTransaction
+                    {
+                        Date = p.Date,
+                        VoucherNumber = p.PaymentNumber,
+                        TransactionType = "Bank Payment",
+                        BankName = SelectedBankForHistory.BankName,
+                        PartyName = !string.IsNullOrWhiteSpace(p.VendorName) ? p.VendorName : (!string.IsNullOrWhiteSpace(p.CustomerName) ? p.CustomerName : "General Party"),
+                        Amount = -p.Amount,
+                        Narration = p.Narration ?? p.Remarks ?? ""
+                    })
+                    .ToListAsync();
+
+                var expenses = await db.Expenses
+                    .Where(e => e.BankId == bankId && e.PaymentMethod == PaymentMethod.Bank && e.Status == "Paid")
+                    .Select(e => new BankHistoryTransaction
+                    {
+                        Date = e.Date,
+                        VoucherNumber = e.VoucherNumber,
+                        TransactionType = "Bank Expense",
+                        BankName = SelectedBankForHistory.BankName,
+                        PartyName = e.Title ?? e.Category ?? "Expense",
+                        Amount = -e.Amount,
+                        Narration = e.Description ?? e.Notes ?? ""
+                    })
+                    .ToListAsync();
+
+                // 2. Combine all transactions and sort chronologically (oldest first) to compute running balances
+                var allTxns = receipts.Concat(payments).Concat(expenses)
+                    .OrderBy(t => t.Date)
+                    .ThenBy(t => t.VoucherNumber)
+                    .ToList();
+
+                // 3. Compute InitialBalance before any transactions
+                var currentBankInDb = await db.Banks.FindAsync(bankId);
+                var currentBalanceToday = currentBankInDb?.CurrentBalance ?? SelectedBankForHistory.CurrentBalance;
+
+                var totalTxnsSum = allTxns.Sum(t => t.Amount);
+                var initialBalance = currentBalanceToday - totalTxnsSum;
+
+                // 4. Compute running balance for all transactions
+                var running = initialBalance;
+                foreach (var txn in allTxns)
+                {
+                    running += txn.Amount;
+                    txn.RunningBalance = running;
+                }
+
+                // 5. Filter for target date range
+                var fromDateLimit = HistoryFromDate.Date;
+                var toDateLimit = HistoryToDate.Date.AddDays(1).AddSeconds(-1);
+
+                var filteredTxns = allTxns
+                    .Where(t => t.Date >= fromDateLimit && t.Date <= toDateLimit)
+                    .OrderByDescending(t => t.Date)
+                    .ThenByDescending(t => t.VoucherNumber)
+                    .ToList();
+
+                // 6. Compute Opening and Closing balance for display
+                var txnsBeforeRange = allTxns.Where(t => t.Date < fromDateLimit).ToList();
+                BankHistoryOpeningBalance = txnsBeforeRange.Any() 
+                    ? txnsBeforeRange.Last().RunningBalance 
+                    : initialBalance;
+
+                var txnsInRangeOrBefore = allTxns.Where(t => t.Date <= toDateLimit).ToList();
+                BankHistoryClosingBalance = txnsInRangeOrBefore.Any() 
+                    ? txnsInRangeOrBefore.Last().RunningBalance 
+                    : initialBalance;
+
+                // 7. Update display list
+                BankHistoryTransactions.Clear();
+                foreach (var txn in filteredTxns)
+                {
+                    BankHistoryTransactions.Add(txn);
+                }
+            }
+        }
+
+        [RelayCommand]
+        public async Task PrintBankHistoryLedgerAsync()
+        {
+            if (SelectedBankForHistory == null) return;
+
+            var company = (await _companyRepo.GetAllAsync()).FirstOrDefault() ?? new CompanySetting();
+            
+            var title = $"Bank Ledger - {SelectedBankForHistory.BankName} ({SelectedBankForHistory.AccountNumber})";
+            var dateRangeStr = $"Date Range: {HistoryFromDate:dd/MM/yyyy} to {HistoryToDate:dd/MM/yyyy}";
+            var openingBalStr = $"Opening Balance: Rs. {BankHistoryOpeningBalance:N2}";
+            var closingBalStr = $"Closing Balance: Rs. {BankHistoryClosingBalance:N2}";
+            
+            var reportTitle = $"{title}\n{dateRangeStr}\n{openingBalStr}  |  {closingBalStr}";
+
+            var headers = new[] { "Date", "Voucher No", "Type", "Party", "Dr/Cr", "Amount", "Running Bal", "Narration" };
+            
+            var rows = BankHistoryTransactions.Select(t => new[]
+            {
+                t.Date.ToString("dd-MM-yyyy"),
+                t.VoucherNumber ?? "",
+                t.TransactionType ?? "",
+                t.PartyName ?? "",
+                t.Amount >= 0 ? "Debit" : "Credit",
+                $"Rs. {Math.Abs(t.Amount):N2}",
+                $"Rs. {t.RunningBalance:N2}",
+                t.Narration ?? ""
+            }).ToList();
+
+            var totals = new[] 
+            { 
+                "TOTALS", 
+                "", 
+                "", 
+                "", 
+                "", 
+                $"Total Txns: {rows.Count}", 
+                $"Closing: Rs. {BankHistoryClosingBalance:N2}", 
+                "" 
+            };
+
+            _printService.PrintReportTable(reportTitle, headers, rows, totals, company);
+        }
+    }
+
+    public class BankHistoryTransaction
+    {
+        public DateTime Date { get; set; }
+        public string VoucherNumber { get; set; } = string.Empty;
+        public string TransactionType { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string PartyName { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string Narration { get; set; } = string.Empty;
+        public decimal RunningBalance { get; set; }
+        
+        public string AmountColor => Amount >= 0 ? "#059669" : "#DC2626"; 
+        public string DisplayAmount => Amount >= 0 ? $"+{Amount:N2}" : $"{Amount:N2}";
     }
 }
