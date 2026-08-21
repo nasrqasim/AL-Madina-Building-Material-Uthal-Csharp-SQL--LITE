@@ -205,7 +205,7 @@ namespace AlMadinaERP.Data
                 {
                     Id = 1,
                     Username = "admin",
-                    PasswordHash = "admin123",
+                    PasswordHash = "8cr7/OH2gbCn4CSBKgOf6wqIt/xbN9pJjIwiw/EBpJg=",
                     FullName = "System Administrator",
                     Role = UserRole.Admin,
                     IsActive = true,

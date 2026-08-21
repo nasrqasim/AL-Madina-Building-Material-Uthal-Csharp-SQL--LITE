@@ -37,7 +37,8 @@ namespace EditModeTestSuite
         {
             _dbPath = dbPath;
             _dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite($"Data Source={_dbPath}")
+                .UseSqlite($"Data Source={_dbPath};Foreign Keys=True;")
+                .AddInterceptors(new AlMadinaERP.Data.SqlitePragmasInterceptor())
                 .Options;
 
             _factory = new TestDbContextFactory(_dbOptions);
@@ -95,6 +96,35 @@ namespace EditModeTestSuite
                 using (var db = _factory.CreateDbContext())
                 {
                     db.Database.EnsureCreated();
+
+                    // Verify SQLite pragmas on connection opened by DbContext
+                    var conn = db.Database.GetDbConnection();
+                    bool wasOpen = conn.State == System.Data.ConnectionState.Open;
+                    if (!wasOpen) await conn.OpenAsync();
+
+                    using (var cmdFk = conn.CreateCommand())
+                    {
+                        cmdFk.CommandText = "PRAGMA foreign_keys;";
+                        var fk = cmdFk.ExecuteScalar();
+                        AssertTrue("SQLite Pragma: foreign_keys", fk != null && Convert.ToInt32(fk) == 1, $"foreign_keys is {fk} (Expected 1)");
+                    }
+
+                    using (var cmdBt = conn.CreateCommand())
+                    {
+                        cmdBt.CommandText = "PRAGMA busy_timeout;";
+                        var bt = cmdBt.ExecuteScalar();
+                        AssertTrue("SQLite Pragma: busy_timeout", bt != null && Convert.ToInt32(bt) == 5000, $"busy_timeout is {bt} ms (Expected 5000)");
+                    }
+
+                    using (var cmdJm = conn.CreateCommand())
+                    {
+                        cmdJm.CommandText = "PRAGMA journal_mode;";
+                        var jm = cmdJm.ExecuteScalar();
+                        AssertTrue("SQLite Pragma: journal_mode", jm != null && jm.ToString().ToLower() == "wal", $"journal_mode is {jm} (Expected wal)");
+                    }
+
+                    if (!wasOpen) await conn.CloseAsync();
+
                     // Seed initial company setting
                     db.CompanySettings.Add(new CompanySetting 
                     { 
@@ -1069,6 +1099,27 @@ namespace EditModeTestSuite
 
                     AssertTrue("DB Integrity - Purchase Item IDs", invalidPurchaseItems == 0, "No invalid Purchase Item references.");
                     AssertTrue("DB Integrity - Sale Item IDs", invalidSaleItems == 0, "No invalid Sale Item references.");
+
+                    // Verify physical index presence
+                    var conn = db.Database.GetDbConnection();
+                    bool wasOpen = conn.State == System.Data.ConnectionState.Open;
+                    if (!wasOpen) await conn.OpenAsync();
+
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='IX_CustomerOrderItems_ItemId';";
+                        var count = Convert.ToInt32(cmd.ExecuteScalar());
+                        AssertTrue("DB Integrity - CustomerOrderItem ItemId Index", count == 1, "Index IX_CustomerOrderItems_ItemId exists physically in sqlite_master.");
+                    }
+
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='IX_SaleInvoiceItems_ItemId';";
+                        var count = Convert.ToInt32(cmd.ExecuteScalar());
+                        AssertTrue("DB Integrity - SaleInvoiceItem ItemId Index", count == 1, "Index IX_SaleInvoiceItems_ItemId exists physically in sqlite_master.");
+                    }
+
+                    if (!wasOpen) await conn.CloseAsync();
                 }
             }
             catch (Exception ex)

@@ -59,7 +59,7 @@ namespace AlMadinaERP.Services
                     _context.Users.Add(new User
                     {
                         Username = "Superadmin",
-                        PasswordHash = PasswordHasher.HashPassword("12345"),
+                        PasswordHash = PasswordHasher.HashPassword("admin123"),
                         FullName = "Super Administrator",
                         Role = UserRole.Admin,
                         IsActive = true,
