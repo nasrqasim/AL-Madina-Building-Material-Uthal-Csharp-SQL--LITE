@@ -199,13 +199,13 @@ namespace AlMadinaERP.Data
                 }
             );
 
-            // Seed Default Admin User (Password: admin123)
+            // Seed Default Admin User (Password: admin1234)
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
                     Id = 1,
                     Username = "admin",
-                    PasswordHash = "8cr7/OH2gbCn4CSBKgOf6wqIt/xbN9pJjIwiw/EBpJg=",
+                    PasswordHash = "9joSQJEtDxGqAaiwtw+KV0CncXvuzj3LxwpMILDEDSY=",
                     FullName = "System Administrator",
                     Role = UserRole.Admin,
                     IsActive = true,

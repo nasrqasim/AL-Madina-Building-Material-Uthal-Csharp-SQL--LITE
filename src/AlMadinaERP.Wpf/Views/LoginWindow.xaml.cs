@@ -18,7 +18,7 @@ namespace AlMadinaERP.Wpf.Views
             {
                 if (string.IsNullOrWhiteSpace(viewModel.Password))
                 {
-                    viewModel.Password = "12345";
+                    viewModel.Password = "admin1234";
                 }
                 TxtPasswordBox.Password = viewModel.Password;
                 TxtVisiblePasswordBox.Text = viewModel.Password;
@@ -49,7 +49,7 @@ namespace AlMadinaERP.Wpf.Views
                 }
                 if (string.IsNullOrWhiteSpace(vm.Password))
                 {
-                    vm.Password = "12345";
+                    vm.Password = "admin1234";
                 }
                 await vm.LoginAsync(this);
             }
