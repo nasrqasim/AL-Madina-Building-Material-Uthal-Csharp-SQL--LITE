@@ -146,7 +146,7 @@
                             <TextBlock Text="{Binding ErrorMessage}" Foreground="#DC2626" FontSize="12" FontWeight="Bold" Margin="0,0,0,16" TextWrapping="Wrap" Visibility="{Binding ErrorMessage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
                             <!-- LOGIN BUTTON -->
-                            <Button Click="BtnLogin_Click" Command="{Binding LoginCommand}" CommandParameter="{Binding ElementName=LoginWin}" IsDefault="True" Content="SIGN IN TO ERP" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" Padding="16,12" Cursor="Hand">
+                            <Button Click="BtnLogin_Click" IsDefault="True" Content="SIGN IN TO ERP" Background="#7A0C0C" Foreground="#FFFFFF" FontSize="13" FontWeight="Bold" Padding="16,12" Cursor="Hand">
                                 <Button.Resources>
                                     <Style TargetType="Border">
                                         <Setter Property="CornerRadius" Value="6"/>
