@@ -83,6 +83,28 @@ namespace AlMadinaERP.Wpf
                     await authService.EnsureSuperadminExistsAsync();
                 }
 
+                // Fire-and-forget background auto-backup (non-blocking)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using (var scope = ServiceProvider.CreateScope())
+                        {
+                            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            var setting = await db.CompanySettings.AsNoTracking().FirstOrDefaultAsync();
+                            if (setting != null && setting.AutoBackupDaily)
+                            {
+                                var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
+                                await backupService.PerformAutoBackupIfEnabledAsync(setting);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore backup errors to prevent application startup crashes
+                    }
+                });
+
                 var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
                 loginWindow.Show();
             }
@@ -155,6 +177,10 @@ namespace AlMadinaERP.Wpf
                 {
                     await dbContext.Database.ExecuteSqlRawAsync("ALTER TABLE CustomerOrders ADD COLUMN TotalAmount REAL DEFAULT 0;");
                 }
+
+                // Create direct indexes on ItemId for performance
+                await dbContext.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_CustomerOrderItems_ItemId ON CustomerOrderItems (ItemId);");
+                await dbContext.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_SaleInvoiceItems_ItemId ON SaleInvoiceItems (ItemId);");
             }
             catch (Exception ex)
             {

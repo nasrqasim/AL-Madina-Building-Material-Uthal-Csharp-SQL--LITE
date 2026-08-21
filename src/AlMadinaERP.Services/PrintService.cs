@@ -23,9 +23,7 @@ namespace AlMadinaERP.Services
                 {
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "almadina_logo.jpeg"),
                     Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "almadina_logo.jpeg"),
-                    @"D:\AMBM\src\AlMadinaERP.Wpf\Resources\almadina_logo.jpeg",
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "almadina logo.jpeg"),
-                    @"D:\AMBM\almadina logo.jpeg"
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "almadina logo.jpeg")
                 };
 
                 foreach (var path in paths)
@@ -91,7 +89,8 @@ namespace AlMadinaERP.Services
                     doc.Blocks.Add(companyPar);
 
                     // 3. Telephone Number (Exact required POS phone)
-                    var phonePar = new Paragraph(new Run("Tel: 03351279963"))
+                    var companyPhone = string.IsNullOrWhiteSpace(company.Phone) ? "03351279963" : company.Phone;
+                    var phonePar = new Paragraph(new Run("Tel: " + companyPhone))
                     {
                         TextAlignment = TextAlignment.Center,
                         FontSize = 12,

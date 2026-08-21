@@ -29,23 +29,18 @@ namespace AlMadinaERP.Services
                 Directory.CreateDirectory(targetFolderPath);
             }
 
-            // Checkpoint WAL log into main DB file
-            try
-            {
-                await _context.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(FULL);");
-            }
-            catch
-            {
-            }
-
             var appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AlMadinaERP");
             var sourceDbPath = Path.Combine(appDataFolder, "Company.db");
             var backupFileName = $"Company_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.db";
             var destPath = Path.Combine(targetFolderPath, backupFileName);
 
-            if (File.Exists(sourceDbPath))
+            // Use native online SQLite Backup API to safely copy active databases
+            using (var sourceConnection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={sourceDbPath};Foreign Keys=False;"))
+            using (var destinationConnection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={destPath};Foreign Keys=False;"))
             {
-                File.Copy(sourceDbPath, destPath, overwrite: true);
+                await sourceConnection.OpenAsync();
+                await destinationConnection.OpenAsync();
+                sourceConnection.BackupDatabase(destinationConnection);
             }
 
             return destPath;
@@ -64,17 +59,50 @@ namespace AlMadinaERP.Services
 
             File.Copy(backupFilePath, destDbPath, overwrite: true);
 
+            // Safely delete stale WAL/SHM log files if they exist to prevent recovery corruption
+            var walPath = destDbPath + "-wal";
+            var shmPath = destDbPath + "-shm";
+            try
+            {
+                if (File.Exists(walPath)) File.Delete(walPath);
+                if (File.Exists(shmPath)) File.Delete(shmPath);
+            }
+            catch (Exception)
+            {
+                // Log and swallow gracefully if files are locked/unavailable
+            }
+
             await _context.Database.OpenConnectionAsync();
             await _context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
         }
 
         public async Task PerformAutoBackupIfEnabledAsync(CompanySetting setting)
         {
-            if (setting.AutoBackupDaily)
+            if (setting != null && setting.AutoBackupDaily)
             {
                 var backupDir = string.IsNullOrWhiteSpace(setting.BackupPath)
                     ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AlMadinaERP", "Backups")
                     : setting.BackupPath;
+
+                if (!Directory.Exists(backupDir))
+                {
+                    Directory.CreateDirectory(backupDir);
+                }
+
+                // Prevent duplicates if already backed up today
+                var todayPattern = $"Company_Backup_{DateTime.Now:yyyyMMdd}_*.db";
+                try
+                {
+                    var files = Directory.GetFiles(backupDir, todayPattern);
+                    if (files.Length > 0)
+                    {
+                        return; // Already backed up today
+                    }
+                }
+                catch
+                {
+                    // Fallback to continue backup if file listing fails
+                }
 
                 await CreateBackupAsync(backupDir);
             }

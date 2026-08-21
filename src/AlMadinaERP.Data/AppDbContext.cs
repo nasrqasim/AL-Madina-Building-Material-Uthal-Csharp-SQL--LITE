@@ -53,7 +53,8 @@ namespace AlMadinaERP.Data
                     Directory.CreateDirectory(folder);
                 }
                 var dbPath = Path.Combine(folder, "Company.db");
-                optionsBuilder.UseSqlite($"Data Source={dbPath}");
+                optionsBuilder.UseSqlite($"Data Source={dbPath};Foreign Keys=True;")
+                              .AddInterceptors(new SqlitePragmasInterceptor());
             }
         }
 
@@ -95,6 +96,11 @@ namespace AlMadinaERP.Data
 
             modelBuilder.Entity<SaleInvoiceItem>()
                 .HasIndex(sii => new { sii.SaleInvoiceId, sii.ItemId });
+            modelBuilder.Entity<SaleInvoiceItem>()
+                .HasIndex(sii => sii.ItemId);
+
+            modelBuilder.Entity<CustomerOrderItem>()
+                .HasIndex(coi => coi.ItemId);
 
             modelBuilder.Entity<PurchaseInvoiceItem>()
                 .HasIndex(pii => new { pii.PurchaseInvoiceId, pii.ItemId });
@@ -512,5 +518,22 @@ namespace AlMadinaERP.Data
         private readonly AppDbContext _context;
         public SingleInstanceDbContextFactory(AppDbContext context) => _context = context;
         public AppDbContext CreateDbContext() => _context;
+    }
+
+    public class SqlitePragmasInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.DbConnectionInterceptor
+    {
+        public override void ConnectionOpened(System.Data.Common.DbConnection connection, Microsoft.EntityFrameworkCore.Diagnostics.ConnectionEndEventData eventData)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY;";
+            command.ExecuteNonQuery();
+        }
+
+        public override async Task ConnectionOpenedAsync(System.Data.Common.DbConnection connection, Microsoft.EntityFrameworkCore.Diagnostics.ConnectionEndEventData eventData, System.Threading.CancellationToken cancellationToken = default)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY;";
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 }

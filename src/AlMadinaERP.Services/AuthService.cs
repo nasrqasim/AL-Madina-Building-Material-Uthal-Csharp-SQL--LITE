@@ -27,8 +27,6 @@ namespace AlMadinaERP.Services
         public static bool VerifyPassword(string password, string storedHash)
         {
             if (string.IsNullOrEmpty(storedHash)) return false;
-            // Legacy/Plaintext check fallback
-            if (password == storedHash) return true;
 
             var computedHash = HashPassword(password);
             return computedHash == storedHash;
@@ -54,38 +52,19 @@ namespace AlMadinaERP.Services
             try
             {
                 using var _context = CreateContext();
-                var users = await _context.Users.ToListAsync();
-                var superadmin = users.FirstOrDefault(u => u.Username.Equals("Superadmin", StringComparison.OrdinalIgnoreCase));
+                var anyUser = await _context.Users.AnyAsync();
                 
-                if (superadmin == null)
+                if (!anyUser)
                 {
-                    // Check if default admin exists and rename/update, otherwise create Superadmin
-                    var defaultAdmin = users.FirstOrDefault(u => u.Username.Equals("admin", StringComparison.OrdinalIgnoreCase));
-                    if (defaultAdmin != null)
+                    _context.Users.Add(new User
                     {
-                        defaultAdmin.Username = "Superadmin";
-                        defaultAdmin.PasswordHash = PasswordHasher.HashPassword("12345");
-                        defaultAdmin.FullName = "Super Administrator";
-                        defaultAdmin.Role = UserRole.Admin;
-                        defaultAdmin.IsActive = true;
-                    }
-                    else
-                    {
-                        _context.Users.Add(new User
-                        {
-                            Username = "Superadmin",
-                            PasswordHash = PasswordHasher.HashPassword("12345"),
-                            FullName = "Super Administrator",
-                            Role = UserRole.Admin,
-                            IsActive = true,
-                            CreatedAt = DateTime.Now
-                        });
-                    }
-                    await _context.SaveChangesAsync();
-                }
-                else
-                {
-                    superadmin.PasswordHash = PasswordHasher.HashPassword("12345");
+                        Username = "Superadmin",
+                        PasswordHash = PasswordHasher.HashPassword("12345"),
+                        FullName = "Super Administrator",
+                        Role = UserRole.Admin,
+                        IsActive = true,
+                        CreatedAt = DateTime.Now
+                    });
                     await _context.SaveChangesAsync();
                 }
             }
@@ -123,40 +102,9 @@ namespace AlMadinaERP.Services
             }
             catch { }
 
-            // Master Fail-Safe Credentials Check for admin / superadmin with 12345 or admin123
-            bool isDefaultAdminUser = uTrim.Equals("admin", StringComparison.OrdinalIgnoreCase) || uTrim.Equals("superadmin", StringComparison.OrdinalIgnoreCase);
-            bool isDefaultAdminPass = pTrim == "12345" || pTrim == "admin123";
-
-            if (isDefaultAdminUser && isDefaultAdminPass)
-            {
-                if (user == null)
-                {
-                    user = new User
-                    {
-                        Id = 1,
-                        Username = "Superadmin",
-                        PasswordHash = PasswordHasher.HashPassword("12345"),
-                        FullName = "Super Administrator",
-                        Role = UserRole.Admin,
-                        IsActive = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    try
-                    {
-                        using var _context = CreateContext();
-                        await _context.Users.AddAsync(user);
-                        await _context.SaveChangesAsync();
-                    }
-                    catch { }
-                }
-
-                _currentUser = user;
-                return user;
-            }
-
             if (user != null)
             {
-                if (PasswordHasher.VerifyPassword(pTrim, user.PasswordHash) || pTrim == user.PasswordHash)
+                if (PasswordHasher.VerifyPassword(pTrim, user.PasswordHash))
                 {
                     _currentUser = user;
                     return user;
