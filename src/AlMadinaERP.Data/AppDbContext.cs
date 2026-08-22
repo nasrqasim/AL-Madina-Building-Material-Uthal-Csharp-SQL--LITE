@@ -184,7 +184,7 @@ namespace AlMadinaERP.Data
                     Id = 1,
                     CompanyName = "AL Madina Building Material Uthal",
                     Tagline = "Wholesale & Retail Building Material Supplies",
-                    Phone = "0300-1234567 / 0333-7654321",
+                    Phone = "03351279963",
                     Address = "Main Bazaar, Uthal, District Lasbela, Balochistan",
                     InvoicePrefix = "INV",
                     PurchasePrefix = "PUR",

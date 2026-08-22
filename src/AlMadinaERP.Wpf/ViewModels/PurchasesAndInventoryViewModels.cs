@@ -139,6 +139,15 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         private bool _isRefreshingVendors = false;
+        private bool _isBusy = false;
+        private System.Threading.CancellationTokenSource? _loadCts;
+
+        private void CancelLoading()
+        {
+            _loadCts?.Cancel();
+            _loadCts?.Dispose();
+            _loadCts = null;
+        }
 
         private void OnPurchaseItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -306,15 +315,19 @@ namespace AlMadinaERP.Wpf.ViewModels
             }
         }
 
-        private async Task EnsureItemsLoadedAsync()
+        private async Task EnsureItemsLoadedAsync(System.Threading.CancellationToken token = default)
         {
             var items = await _inventoryService.SearchItemsAsync("");
+            if (token.IsCancellationRequested) return;
+
             AvailableItems = new ObservableCollection<Item>(items);
 
             _isRefreshingVendors = true;
             try
             {
                 var vList = await _vendorService.SearchVendorsAsync("");
+                if (token.IsCancellationRequested) return;
+
                 var selVendId = SelectedVendor?.Id ?? NewPurchase?.VendorId;
                 Vendors = new ObservableCollection<Vendor>(vList);
                 if (selVendId.HasValue && selVendId.Value > 0)
@@ -327,26 +340,55 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
-        public void OpenNewInvoiceForm()
+        public async Task OpenNewInvoiceForm()
         {
-            IsReturnMode = false;
-            ResetNewPurchase();
-            IsFormVisible = true;
-            _ = EnsureItemsLoadedAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
+            try
+            {
+                IsReturnMode = false;
+                ResetNewPurchase();
+                IsFormVisible = true;
+                await EnsureItemsLoadedAsync(token);
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
-        public void OpenNewReturnForm()
+        public async Task OpenNewReturnForm()
         {
-            IsReturnMode = true;
-            ResetNewPurchase();
-            IsFormVisible = true;
-            _ = EnsureItemsLoadedAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
+            try
+            {
+                IsReturnMode = true;
+                ResetNewPurchase();
+                IsFormVisible = true;
+                await EnsureItemsLoadedAsync(token);
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
         public void CloseForm()
         {
+            CancelLoading();
             IsFormVisible = false;
             ResetNewPurchase();
         }
@@ -433,15 +475,33 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task SavePurchaseDraftAsync()
         {
-            NewPurchase.Status = "Draft";
-            await SaveInternalAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+            try
+            {
+                NewPurchase.Status = "Draft";
+                await SaveInternalAsync();
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
         public async Task SavePurchasePostedAsync()
         {
-            NewPurchase.Status = "Posted";
-            await SaveInternalAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+            try
+            {
+                NewPurchase.Status = "Posted";
+                await SaveInternalAsync();
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         private async Task SaveInternalAsync()
@@ -647,14 +707,21 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task EditInvoiceAsync(PurchaseInvoice purchase)
         {
-            if (purchase == null) return;
+            if (purchase == null || _isBusy) return;
+            _isBusy = true;
+
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
             _isRefreshingVendors = true;
             try
             {
-                await EnsureItemsLoadedAsync();
+                await EnsureItemsLoadedAsync(token);
+                if (token.IsCancellationRequested) return;
 
                 var fullPurchase = await _purchaseService.GetPurchaseInvoiceByIdAsync(purchase.Id);
-                if (fullPurchase == null) return;
+                if (token.IsCancellationRequested || fullPurchase == null) return;
 
                 UnsubscribeAllPurchaseItemEvents(NewPurchase);
                 fullPurchase.Items = fullPurchase.Items != null
@@ -675,6 +742,7 @@ namespace AlMadinaERP.Wpf.ViewModels
 
                 foreach (var item in NewPurchase.Items)
                 {
+                    if (token.IsCancellationRequested) return;
                     var match = AvailableItems.FirstOrDefault(i =>
                         (item.ItemId > 0 && i.Id == item.ItemId) ||
                         (!string.IsNullOrWhiteSpace(item.ItemCode) && i.Code.Equals(item.ItemCode.Trim(), StringComparison.OrdinalIgnoreCase)) ||
@@ -695,11 +763,13 @@ namespace AlMadinaERP.Wpf.ViewModels
 
                     SubscribePurchaseItemEvents(item);
                 }
+                if (token.IsCancellationRequested) return;
                 RecalculateTotals();
             }
             finally
             {
                 _isRefreshingVendors = false;
+                _isBusy = false;
             }
         }
 

@@ -81,6 +81,15 @@ namespace AlMadinaERP.Wpf
 
                     var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
                     await authService.EnsureSuperadminExistsAsync();
+
+                    // Ensure company phone number is correct
+                    var setting = await dbContext.CompanySettings.FirstOrDefaultAsync();
+                    if (setting != null && (setting.Phone == "0300-1234567 / 0333-7654321" || string.IsNullOrWhiteSpace(setting.Phone)))
+                    {
+                        setting.Phone = "03351279963";
+                        dbContext.CompanySettings.Update(setting);
+                        await dbContext.SaveChangesAsync();
+                    }
                 }
 
                 // Fire-and-forget background auto-backup (non-blocking)

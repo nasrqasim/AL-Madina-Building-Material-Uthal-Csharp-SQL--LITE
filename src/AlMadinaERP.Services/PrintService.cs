@@ -89,7 +89,7 @@ namespace AlMadinaERP.Services
                     doc.Blocks.Add(companyPar);
 
                     // 3. Telephone Number (Exact required POS phone)
-                    var companyPhone = string.IsNullOrWhiteSpace(company.Phone) ? "03351279963" : company.Phone;
+                    var companyPhone = string.IsNullOrWhiteSpace(company.Phone) || company.Phone.Contains("0300-") || company.Phone.Contains("1234567") ? "03351279963" : company.Phone;
                     var phonePar = new Paragraph(new Run("Tel: " + companyPhone))
                     {
                         TextAlignment = TextAlignment.Center,
@@ -1179,7 +1179,8 @@ namespace AlMadinaERP.Services
                     headerPara.Inlines.Add(new Run(compName + "\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
                     headerPara.Inlines.Add(new Run($"{vTypeTitle}\n") { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)) });
                     headerPara.Inlines.Add(new Run($"Voucher #: {receipt.ReceiptNumber}   |   Date: {receipt.Date:dd/MM/yyyy}\n") { FontSize = 10, FontWeight = FontWeights.Bold });
-                    headerPara.Inlines.Add(new Run($"Phone: {company.Phone ?? "03351279963"}   |   Address: {company.Address ?? "Main Bazaar, Uthal"}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
+                    var companyPhone = string.IsNullOrWhiteSpace(company.Phone) || company.Phone.Contains("0300-") || company.Phone.Contains("1234567") ? "03351279963" : company.Phone;
+                    headerPara.Inlines.Add(new Run($"Phone: {companyPhone}   |   Address: {company.Address ?? "Main Bazaar, Uthal"}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
                     doc.Blocks.Add(headerPara);
 
                     // 2. Voucher Details Table
@@ -1293,7 +1294,8 @@ namespace AlMadinaERP.Services
                     headerPara.Inlines.Add(new Run(compName + "\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 12, 12)) });
                     headerPara.Inlines.Add(new Run($"{vTypeTitle}\n") { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)) });
                     headerPara.Inlines.Add(new Run($"Voucher #: {payment.PaymentNumber}   |   Date: {payment.Date:dd/MM/yyyy}\n") { FontSize = 10, FontWeight = FontWeights.Bold });
-                    headerPara.Inlines.Add(new Run($"Phone: {company.Phone ?? "03351279963"}   |   Address: {company.Address ?? "Main Bazaar, Uthal"}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
+                    var companyPhone = string.IsNullOrWhiteSpace(company.Phone) || company.Phone.Contains("0300-") || company.Phone.Contains("1234567") ? "03351279963" : company.Phone;
+                    headerPara.Inlines.Add(new Run($"Phone: {companyPhone}   |   Address: {company.Address ?? "Main Bazaar, Uthal"}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
                     doc.Blocks.Add(headerPara);
 
                     // 2. Voucher Details Table
@@ -1865,6 +1867,7 @@ namespace AlMadinaERP.Services
                     var headerPara = new Paragraph { TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 0, 0, 16) };
                     headerPara.Inlines.Add(new Run(compName + "\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
                     headerPara.Inlines.Add(new Run($"{title.ToUpper()}\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(128, 0, 0)) });
+                    headerPara.Inlines.Add(new Run($"Phone: {company.Phone ?? "03351279963"}   |   Address: {company.Address ?? "Main Bazaar, Uthal"}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
                     headerPara.Inlines.Add(new Run($"Printed Date: {DateTime.Now:dd/MM/yyyy HH:mm}   |   Total Records: {rowsList.Count}\n") { FontSize = 9, Foreground = System.Windows.Media.Brushes.DimGray });
                     doc.Blocks.Add(headerPara);
 

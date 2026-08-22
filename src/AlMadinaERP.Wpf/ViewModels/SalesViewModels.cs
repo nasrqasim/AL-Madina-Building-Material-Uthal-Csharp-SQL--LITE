@@ -78,6 +78,15 @@ namespace AlMadinaERP.Wpf.ViewModels
 
         private List<Item> _allMasterItems = new();
         private System.Threading.CancellationTokenSource? _salesSearchCts;
+        private bool _isBusy = false;
+        private System.Threading.CancellationTokenSource? _loadCts;
+
+        private void CancelLoading()
+        {
+            _loadCts?.Cancel();
+            _loadCts?.Dispose();
+            _loadCts = null;
+        }
 
         public void CancelPendingSearch()
         {
@@ -373,15 +382,20 @@ namespace AlMadinaERP.Wpf.ViewModels
             AvailableItems = new ObservableCollection<Item>(filtered);
         }
 
-        private async Task EnsureItemsLoadedAsync()
+        private async Task EnsureItemsLoadedAsync(System.Threading.CancellationToken token = default)
         {
-            _allMasterItems = await _inventoryService.SearchItemsAsync("");
+            var items = await _inventoryService.SearchItemsAsync("");
+            if (token.IsCancellationRequested) return;
+
+            _allMasterItems = items;
             FilterPosItems(SearchQuery);
 
             _isRefreshingCustomers = true;
             try
             {
                 var custs = await _customerService.SearchCustomersAsync("");
+                if (token.IsCancellationRequested) return;
+
                 var selId = SelectedCustomer?.Id ?? NewInvoice?.CustomerId;
                 Customers = new ObservableCollection<Customer>(custs);
                 if (selId.HasValue && selId.Value > 0)
@@ -394,36 +408,83 @@ namespace AlMadinaERP.Wpf.ViewModels
         }
 
         [RelayCommand]
-        public void OpenCreateInvoice()
+        public async Task OpenCreateInvoice()
         {
-            IsReturnMode = false;
-            ActiveSubView = SalesActiveSubView.SaleInvoiceForm;
-            ResetNewInvoice();
-            _ = EnsureItemsLoadedAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+            
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
+            try
+            {
+                IsReturnMode = false;
+                ActiveSubView = SalesActiveSubView.SaleInvoiceForm;
+                ResetNewInvoice();
+                await EnsureItemsLoadedAsync(token);
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
-        public void OpenNewReturnForm()
+        public async Task OpenNewReturnForm()
         {
-            IsReturnMode = true;
-            ActiveSubView = SalesActiveSubView.SaleReturnForm;
-            ResetNewInvoice();
-            _ = EnsureItemsLoadedAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
+            try
+            {
+                IsReturnMode = true;
+                ActiveSubView = SalesActiveSubView.SaleReturnForm;
+                ResetNewInvoice();
+                await EnsureItemsLoadedAsync(token);
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
-        public void OpenNewPosTerminal()
+        public async Task OpenNewPosTerminal()
         {
-            IsReturnMode = false;
-            ActiveSubView = SalesActiveSubView.PosTerminal;
-            ResetNewInvoice();
-            SearchQuery = string.Empty;
-            _ = EnsureItemsLoadedAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
+
+            try
+            {
+                IsReturnMode = false;
+                ActiveSubView = SalesActiveSubView.PosTerminal;
+                ResetNewInvoice();
+                SearchQuery = string.Empty;
+                await EnsureItemsLoadedAsync(token);
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
         public void CloseSubView()
         {
+            CancelLoading();
+            UnsubscribeAllItemEvents(NewInvoice);
+            ResetNewInvoice();
+            SelectedCustomer = null;
+
             if (ActiveSubView == SalesActiveSubView.SaleReturnForm)
                 ActiveSubView = SalesActiveSubView.SaleReturnList;
             else if (ActiveSubView == SalesActiveSubView.PosTerminal)
@@ -516,15 +577,33 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task SaveInvoiceDraftAsync()
         {
-            NewInvoice.Status = "Draft";
-            await SaveInternalAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+            try
+            {
+                NewInvoice.Status = "Draft";
+                await SaveInternalAsync();
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
         public async Task SaveInvoicePostedAsync()
         {
-            NewInvoice.Status = "Posted";
-            await SaveInternalAsync();
+            if (_isBusy) return;
+            _isBusy = true;
+            try
+            {
+                NewInvoice.Status = "Posted";
+                await SaveInternalAsync();
+            }
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         private async Task SaveInternalAsync()
@@ -757,60 +836,76 @@ namespace AlMadinaERP.Wpf.ViewModels
         [RelayCommand]
         public async Task EditInvoiceAsync(SaleInvoice invoice)
         {
-            if (invoice == null) return;
-            await EnsureItemsLoadedAsync();
+            if (invoice == null || _isBusy) return;
+            _isBusy = true;
 
-            var fullInvoice = await _saleService.GetSaleInvoiceByIdAsync(invoice.Id);
-            if (fullInvoice == null) return;
+            CancelLoading();
+            _loadCts = new System.Threading.CancellationTokenSource();
+            var token = _loadCts.Token;
 
-            UnsubscribeAllItemEvents(NewInvoice);
-            fullInvoice.Items = fullInvoice.Items != null
-                ? new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>(fullInvoice.Items)
-                : new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>();
-            NewInvoice = fullInvoice;
-
-            var targetCust = Customers.FirstOrDefault(c =>
-                (fullInvoice.CustomerId.HasValue && fullInvoice.CustomerId.Value > 0 && c.Id == fullInvoice.CustomerId.Value) ||
-                (!string.IsNullOrWhiteSpace(fullInvoice.CustomerName) && c.Name.Equals(fullInvoice.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase)));
-
-            SelectedCustomer = targetCust;
-            NewInvoice.CustomerId = fullInvoice.CustomerId;
-            NewInvoice.CustomerName = !string.IsNullOrWhiteSpace(fullInvoice.CustomerName) ? fullInvoice.CustomerName : (targetCust?.Name ?? "WALK-IN CUSTOMER");
-
-            if (fullInvoice.Type == InvoiceType.SaleReturn)
+            try
             {
-                IsReturnMode = true;
-                ActiveSubView = SalesActiveSubView.SaleReturnForm;
-            }
-            else
-            {
-                IsReturnMode = false;
-                ActiveSubView = SalesActiveSubView.SaleInvoiceForm;
-            }
+                await EnsureItemsLoadedAsync(token);
+                if (token.IsCancellationRequested) return;
 
-            foreach (var item in NewInvoice.Items)
-            {
-                var match = AvailableItems.FirstOrDefault(i =>
-                    (item.ItemId > 0 && i.Id == item.ItemId) ||
-                    (!string.IsNullOrWhiteSpace(item.ItemCode) && i.Code.Equals(item.ItemCode.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrWhiteSpace(item.ItemName) && i.Name.Equals(item.ItemName.Trim(), StringComparison.OrdinalIgnoreCase)));
+                var fullInvoice = await _saleService.GetSaleInvoiceByIdAsync(invoice.Id);
+                if (token.IsCancellationRequested || fullInvoice == null) return;
 
-                if (match != null)
+                UnsubscribeAllItemEvents(NewInvoice);
+                fullInvoice.Items = fullInvoice.Items != null
+                    ? new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>(fullInvoice.Items)
+                    : new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>();
+                NewInvoice = fullInvoice;
+
+                var targetCust = Customers.FirstOrDefault(c =>
+                    (fullInvoice.CustomerId.HasValue && fullInvoice.CustomerId.Value > 0 && c.Id == fullInvoice.CustomerId.Value) ||
+                    (!string.IsNullOrWhiteSpace(fullInvoice.CustomerName) && c.Name.Equals(fullInvoice.CustomerName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+                SelectedCustomer = targetCust;
+                NewInvoice.CustomerId = fullInvoice.CustomerId;
+                NewInvoice.CustomerName = !string.IsNullOrWhiteSpace(fullInvoice.CustomerName) ? fullInvoice.CustomerName : (targetCust?.Name ?? "WALK-IN CUSTOMER");
+
+                if (fullInvoice.Type == InvoiceType.SaleReturn)
                 {
-                    item.Item = match;
-                    item.ItemCode = match.Code;
-                    item.ItemName = match.Name;
+                    IsReturnMode = true;
+                    ActiveSubView = SalesActiveSubView.SaleReturnForm;
                 }
-                else if (!string.IsNullOrWhiteSpace(item.ItemName))
+                else
                 {
-                    var fallback = new Item { Id = item.ItemId, Code = item.ItemCode ?? "ITM-001", Name = item.ItemName, SalePrice = item.Rate };
-                    AvailableItems.Add(fallback);
-                    item.Item = fallback;
+                    IsReturnMode = false;
+                    ActiveSubView = SalesActiveSubView.SaleInvoiceForm;
                 }
 
-                SubscribeItemEvents(item);
+                foreach (var item in NewInvoice.Items)
+                {
+                    if (token.IsCancellationRequested) return;
+                    var match = AvailableItems.FirstOrDefault(i =>
+                        (item.ItemId > 0 && i.Id == item.ItemId) ||
+                        (!string.IsNullOrWhiteSpace(item.ItemCode) && i.Code.Equals(item.ItemCode.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(item.ItemName) && i.Name.Equals(item.ItemName.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+                    if (match != null)
+                    {
+                        item.Item = match;
+                        item.ItemCode = match.Code;
+                        item.ItemName = match.Name;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(item.ItemName))
+                    {
+                        var fallback = new Item { Id = item.ItemId, Code = item.ItemCode ?? "ITM-001", Name = item.ItemName, SalePrice = item.Rate };
+                        AvailableItems.Add(fallback);
+                        item.Item = fallback;
+                    }
+
+                    SubscribeItemEvents(item);
+                }
+                if (token.IsCancellationRequested) return;
+                RecalculateTotals();
             }
-            RecalculateTotals();
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         [RelayCommand]
