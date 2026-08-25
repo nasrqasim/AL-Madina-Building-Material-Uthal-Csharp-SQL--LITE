@@ -267,6 +267,7 @@ namespace AlMadinaERP.Services
                         existing.TaxAmount = invoice.TaxAmount;
                         existing.ExtraExpenses = invoice.ExtraExpenses;
                         existing.VehicleCharges = invoice.VehicleCharges;
+                        existing.LabourCharges = invoice.LabourCharges;
                         existing.Remarks = invoice.Remarks;
 
                         _context.PurchaseInvoices.Update(existing);
@@ -287,7 +288,7 @@ namespace AlMadinaERP.Services
                     invoice.Date = DateTime.Now;
                 }
 
-                invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.ExtraExpenses + invoice.VehicleCharges);
+                invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.TaxAmount + invoice.ExtraExpenses + invoice.VehicleCharges + invoice.LabourCharges);
 
                 if (invoice.AmountPaid <= 0 && invoice.IsCashPurchase)
                 {

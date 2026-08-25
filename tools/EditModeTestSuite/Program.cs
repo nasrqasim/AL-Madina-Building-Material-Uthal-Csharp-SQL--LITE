@@ -478,6 +478,146 @@ if (args.Contains("--audit"))
                     failedTests++;
                 }
 
+                // -------------------------------------------------------------------
+                // TEST SECTION 7: VEHICLE CHARGES, LABOUR CHARGES & STOCK ADJUSTMENTS
+                // -------------------------------------------------------------------
+                Console.WriteLine("\n[7/7] TESTING VEHICLE CHARGES, LABOUR CHARGES & STOCK ADJUSTMENTS...");
+                try
+                {
+                    // 1. Setup fresh instances
+                    var testItem = new Item { Code = "TEST-STOCK-ITEM", Name = "Test Stock Item", SalePrice = 800, PurchasePrice = 500, CurrentStock = 100, BaseUnit = "Pcs", IsActive = true };
+                    db.Items.Add(testItem);
+                    db.SaveChanges();
+
+                    var initStock = testItem.CurrentStock; // 100
+
+                    // 2. Create Sale Invoice with VehicleCharges & LabourCharges
+                    var saleInvoice = new SaleInvoice
+                    {
+                        CustomerId = custA.Id,
+                        CustomerName = custA.Name,
+                        Date = DateTime.Now,
+                        IsCashSale = true,
+                        Status = "Posted",
+                        Type = InvoiceType.SaleInvoice,
+                        VehicleCharges = 40,
+                        LabourCharges = 20,
+                        Items = new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>
+                        {
+                            new SaleInvoiceItem { ItemId = testItem.Id, ItemCode = testItem.Code, ItemName = testItem.Name, Quantity = 1, Rate = 800, TotalPrice = 800 }
+                        }
+                    };
+
+                    // Compute and verify local calculation
+                    saleInvoice.RecalculateTotals();
+                    if (saleInvoice.TotalAmount != 860)
+                    {
+                        throw new Exception($"Local SaleInvoice TotalAmount incorrect! Expected 860, got {saleInvoice.TotalAmount}");
+                    }
+
+                    // Save Sale Invoice via Service
+                    var savedSale = saleService.SaveSaleInvoiceAsync(saleInvoice).GetAwaiter().GetResult();
+                    if (savedSale.TotalAmount != 860)
+                    {
+                        throw new Exception($"Saved SaleInvoice TotalAmount incorrect! Expected 860, got {savedSale.TotalAmount}");
+                    }
+
+                    // Verify DB reload
+                    var fetchedSale = saleService.GetSaleInvoiceByIdAsync(savedSale.Id).GetAwaiter().GetResult();
+                    if (fetchedSale?.TotalAmount != 860 || fetchedSale.LabourCharges != 20 || fetchedSale.VehicleCharges != 40)
+                    {
+                        throw new Exception($"Fetched SaleInvoice values incorrect! TotalAmount={fetchedSale?.TotalAmount}, VehicleCharges={fetchedSale?.VehicleCharges}, LabourCharges={fetchedSale?.LabourCharges}");
+                    }
+
+                    // Verify Stock Decreased
+                    var itemAfterSale = db.Items.AsNoTracking().FirstOrDefault(i => i.Id == testItem.Id);
+                    if (itemAfterSale?.CurrentStock != initStock - 1)
+                    {
+                        throw new Exception($"Stock did not decrease on Sale! Initial={initStock}, After Sale={itemAfterSale?.CurrentStock}");
+                    }
+                    Console.WriteLine(" -> Sale stock decrease verified.");
+
+                    // 3. Create Sale Return
+                    var saleReturn = new SaleInvoice
+                    {
+                        CustomerId = custA.Id,
+                        CustomerName = custA.Name,
+                        Date = DateTime.Now,
+                        IsCashSale = true,
+                        Status = "Posted",
+                        Type = InvoiceType.SaleReturn,
+                        Items = new System.Collections.ObjectModel.ObservableCollection<SaleInvoiceItem>
+                        {
+                            new SaleInvoiceItem { ItemId = testItem.Id, ItemCode = testItem.Code, ItemName = testItem.Name, Quantity = 1, Rate = 800, TotalPrice = 800 }
+                        }
+                    };
+                    saleService.SaveSaleInvoiceAsync(saleReturn).GetAwaiter().GetResult();
+
+                    // Verify Stock Increased
+                    var itemAfterReturn = db.Items.AsNoTracking().FirstOrDefault(i => i.Id == testItem.Id);
+                    if (itemAfterReturn?.CurrentStock != initStock)
+                    {
+                        throw new Exception($"Stock did not increase on Sale Return! Expected={initStock}, got={itemAfterReturn?.CurrentStock}");
+                    }
+                    Console.WriteLine(" -> Sale return stock increase verified.");
+
+                    // 4. Create Purchase Invoice
+                    var purchaseInvoice = new PurchaseInvoice
+                    {
+                        VendorId = vendA.Id,
+                        VendorName = vendA.Name,
+                        Date = DateTime.Now,
+                        IsCashPurchase = true,
+                        Status = "Posted",
+                        Type = PurchaseType.PurchaseInvoice,
+                        Items = new System.Collections.ObjectModel.ObservableCollection<PurchaseInvoiceItem>
+                        {
+                            new PurchaseInvoiceItem { ItemId = testItem.Id, ItemCode = testItem.Code, ItemName = testItem.Name, Quantity = 10, Rate = 500, TotalPrice = 5000 }
+                        }
+                    };
+                    purchaseService.SavePurchaseInvoiceAsync(purchaseInvoice).GetAwaiter().GetResult();
+
+                    // Verify Stock Increased
+                    var itemAfterPurchase = db.Items.AsNoTracking().FirstOrDefault(i => i.Id == testItem.Id);
+                    if (itemAfterPurchase?.CurrentStock != initStock + 10)
+                    {
+                        throw new Exception($"Stock did not increase on Purchase! Expected={initStock + 10}, got={itemAfterPurchase?.CurrentStock}");
+                    }
+                    Console.WriteLine(" -> Purchase stock increase verified.");
+
+                    // 5. Create Purchase Return
+                    var purchaseReturn = new PurchaseInvoice
+                    {
+                        VendorId = vendA.Id,
+                        VendorName = vendA.Name,
+                        Date = DateTime.Now,
+                        IsCashPurchase = true,
+                        Status = "Posted",
+                        Type = PurchaseType.PurchaseReturn,
+                        Items = new System.Collections.ObjectModel.ObservableCollection<PurchaseInvoiceItem>
+                        {
+                            new PurchaseInvoiceItem { ItemId = testItem.Id, ItemCode = testItem.Code, ItemName = testItem.Name, Quantity = 5, Rate = 500, TotalPrice = 2500 }
+                        }
+                    };
+                    purchaseService.SavePurchaseInvoiceAsync(purchaseReturn).GetAwaiter().GetResult();
+
+                    // Verify Stock Decreased
+                    var itemAfterPurReturn = db.Items.AsNoTracking().FirstOrDefault(i => i.Id == testItem.Id);
+                    if (itemAfterPurReturn?.CurrentStock != initStock + 5)
+                    {
+                        throw new Exception($"Stock did not decrease on Purchase Return! Expected={initStock + 5}, got={itemAfterPurReturn?.CurrentStock}");
+                    }
+                    Console.WriteLine(" -> Purchase return stock decrease verified.");
+
+                    Console.WriteLine(" RESULT: [PASS]");
+                    passedTests++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($" RESULT: [FAIL] - {ex.Message}");
+                    failedTests++;
+                }
+
                 // Cleanup Database
                 try { File.Delete(dbPath); } catch { }
 

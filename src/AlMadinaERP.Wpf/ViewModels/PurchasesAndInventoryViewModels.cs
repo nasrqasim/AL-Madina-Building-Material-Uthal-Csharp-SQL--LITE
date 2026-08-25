@@ -461,7 +461,7 @@ namespace AlMadinaERP.Wpf.ViewModels
                 NewPurchase.Subtotal = NewPurchase.Items.Sum(i => i.TotalPrice + i.DiscountAmount - i.TaxAmount);
                 NewPurchase.DiscountAmount = NewPurchase.Items.Sum(i => i.DiscountAmount);
                 NewPurchase.TaxAmount = NewPurchase.Items.Sum(i => i.TaxAmount);
-                NewPurchase.TotalAmount = (NewPurchase.Subtotal - NewPurchase.DiscountAmount) + NewPurchase.TaxAmount + NewPurchase.ExtraExpenses + NewPurchase.VehicleCharges;
+                NewPurchase.TotalAmount = (NewPurchase.Subtotal - NewPurchase.DiscountAmount) + NewPurchase.TaxAmount + NewPurchase.ExtraExpenses + NewPurchase.VehicleCharges + NewPurchase.LabourCharges;
                 NewPurchase.BalanceDue = NewPurchase.TotalAmount - NewPurchase.AmountPaid;
 
                 OnPropertyChanged(nameof(NewPurchase));

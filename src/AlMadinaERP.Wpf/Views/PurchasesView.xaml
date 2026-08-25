@@ -739,6 +739,10 @@
                                         <TextBlock Text="VEHICLE CHARGES (+):" Foreground="#64748B" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <TextBox Text="{Binding NewPurchase.VehicleCharges, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:N2}'}" Width="110" HorizontalAlignment="Right" Height="26" Padding="4,2" FontSize="11" FontWeight="Bold" TextAlignment="Right"/>
                                     </Grid>
+                                    <Grid Margin="0,2">
+                                        <TextBlock Text="LABOUR CHARGES (+):" Foreground="#64748B" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBox Text="{Binding NewPurchase.LabourCharges, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:N2}'}" Width="110" HorizontalAlignment="Right" Height="26" Padding="4,2" FontSize="11" FontWeight="Bold" TextAlignment="Right"/>
+                                    </Grid>
                                     <Border BorderBrush="#CBD5E1" BorderThickness="0,1,0,0" Margin="0,6,0,6"/>
                                     <Grid>
                                         <TextBlock Text="INVOICE TOTAL (PKR):" Foreground="#7A0C0C" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>

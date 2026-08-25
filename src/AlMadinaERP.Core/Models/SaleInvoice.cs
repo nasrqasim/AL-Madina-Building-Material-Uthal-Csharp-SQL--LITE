@@ -72,6 +72,13 @@ namespace AlMadinaERP.Core.Models
             set { if (_vehicleCharges == value) return; _vehicleCharges = value; RecalculateTotals(); OnPropertyChanged(); }
         }
 
+        private decimal _labourCharges;
+        public decimal LabourCharges
+        {
+            get => _labourCharges;
+            set { if (_labourCharges == value) return; _labourCharges = value; RecalculateTotals(); OnPropertyChanged(); }
+        }
+
         private decimal _additionalDiscount;
         public decimal AdditionalDiscount
         {
@@ -94,7 +101,7 @@ namespace AlMadinaERP.Core.Models
             {
                 _subtotal = Items.Sum(i => i.TotalPrice);
             }
-            TotalAmount = Math.Max(0m, (Subtotal - DiscountAmount - AdditionalDiscount) + ExtraCharges + VehicleCharges);
+            TotalAmount = Math.Max(0m, (Subtotal - DiscountAmount - AdditionalDiscount) + ExtraCharges + VehicleCharges + LabourCharges);
             GrossRefund = TotalAmount;
             NetRefund = Math.Max(0m, GrossRefund - AdditionalDiscount - CarServiceCharge + CarWashDiscount);
         }

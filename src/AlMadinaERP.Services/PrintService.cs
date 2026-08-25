@@ -224,6 +224,12 @@ namespace AlMadinaERP.Services
                         totalsPar.Inlines.Add(new Run($"                                {invoice.VehicleCharges:N2}\n") { FontWeight = FontWeights.Bold, FontSize = 12 });
                     }
 
+                    if (invoice.LabourCharges > 0)
+                    {
+                        totalsPar.Inlines.Add(new Run("Labour Charges") { FontWeight = FontWeights.Bold, FontSize = 12 });
+                        totalsPar.Inlines.Add(new Run($"                                 {invoice.LabourCharges:N2}\n") { FontWeight = FontWeights.Bold, FontSize = 12 });
+                    }
+
                     if (invoice.ExtraCharges > 0)
                     {
                         totalsPar.Inlines.Add(new Run("Extra Expenses") { FontWeight = FontWeights.Bold, FontSize = 12 });
@@ -688,6 +694,8 @@ namespace AlMadinaERP.Services
                     totalsPar.Inlines.Add(new Run($"Gross Total:   PKR {invoice.Subtotal:N2}\n") { FontSize = 10 });
                     if (invoice.VehicleCharges > 0)
                         totalsPar.Inlines.Add(new Run($"Vehicle Charges:   PKR {invoice.VehicleCharges:N2}\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = System.Windows.Media.Brushes.DarkSlateBlue });
+                    if (invoice.LabourCharges > 0)
+                        totalsPar.Inlines.Add(new Run($"Labour Charges:   PKR {invoice.LabourCharges:N2}\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = System.Windows.Media.Brushes.DarkSlateBlue });
                     if (invoice.ExtraCharges > 0)
                         totalsPar.Inlines.Add(new Run($"Extra Expenses:   PKR {invoice.ExtraCharges:N2}\n") { FontSize = 10 });
                     if (invoice.AdditionalDiscount > 0 || invoice.DiscountAmount > 0)
@@ -1092,6 +1100,8 @@ namespace AlMadinaERP.Services
                     totalsPar.Inlines.Add(new Run($"Subtotal:   PKR {invoice.Subtotal:N2}\n") { FontSize = 10 });
                     if (invoice.VehicleCharges > 0)
                         totalsPar.Inlines.Add(new Run($"Vehicle Charges:   PKR {invoice.VehicleCharges:N2}\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = System.Windows.Media.Brushes.DarkSlateBlue });
+                    if (invoice.LabourCharges > 0)
+                        totalsPar.Inlines.Add(new Run($"Labour Charges:   PKR {invoice.LabourCharges:N2}\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = System.Windows.Media.Brushes.DarkSlateBlue });
                     if (invoice.ExtraExpenses > 0)
                         totalsPar.Inlines.Add(new Run($"Extra Expenses:   PKR {invoice.ExtraExpenses:N2}\n") { FontSize = 10 });
                     if (invoice.DiscountAmount > 0)

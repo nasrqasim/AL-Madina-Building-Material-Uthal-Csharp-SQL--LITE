@@ -560,7 +560,7 @@ namespace AlMadinaERP.Wpf.ViewModels
 
                 NewInvoice.Subtotal = NewInvoice.Items.Sum(i => i.TotalPrice + i.DiscountAmount);
                 NewInvoice.DiscountAmount = NewInvoice.Items.Sum(i => i.DiscountAmount);
-                NewInvoice.TotalAmount = Math.Max(0m, (NewInvoice.Subtotal - NewInvoice.DiscountAmount) + NewInvoice.ExtraCharges + NewInvoice.VehicleCharges - NewInvoice.AdditionalDiscount);
+                NewInvoice.TotalAmount = Math.Max(0m, (NewInvoice.Subtotal - NewInvoice.DiscountAmount) + NewInvoice.ExtraCharges + NewInvoice.VehicleCharges + NewInvoice.LabourCharges - NewInvoice.AdditionalDiscount);
                 
                 // Refund calculation
                 NewInvoice.GrossRefund = NewInvoice.TotalAmount;

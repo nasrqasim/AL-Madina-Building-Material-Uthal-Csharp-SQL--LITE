@@ -267,6 +267,7 @@ namespace AlMadinaERP.Services
                         existing.DiscountAmount = invoice.DiscountAmount;
                         existing.ExtraCharges = invoice.ExtraCharges;
                         existing.VehicleCharges = invoice.VehicleCharges;
+                        existing.LabourCharges = invoice.LabourCharges;
                         existing.AdditionalDiscount = invoice.AdditionalDiscount;
                         existing.GrossRefund = invoice.GrossRefund;
                         existing.CarServiceCharge = invoice.CarServiceCharge;
@@ -294,7 +295,7 @@ namespace AlMadinaERP.Services
                 }
 
                 // Total Calculation
-                invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.ExtraCharges - invoice.AdditionalDiscount);
+                invoice.TotalAmount = Math.Max(0m, (invoice.Subtotal - invoice.DiscountAmount) + invoice.ExtraCharges + invoice.VehicleCharges + invoice.LabourCharges - invoice.AdditionalDiscount);
 
                 // Preserve user-specified PaidAmount if set, otherwise default for full cash sale
                 if (invoice.PaidAmount <= 0 && invoice.IsCashSale)

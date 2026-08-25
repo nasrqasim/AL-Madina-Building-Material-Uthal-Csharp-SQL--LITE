@@ -550,6 +550,10 @@
                                     <TextBox Text="{Binding NewInvoice.VehicleCharges, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,4">
+                                    <TextBlock Text="LABOUR CHARGES (+)" Foreground="#38BDF8" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewInvoice.LabourCharges, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,4">
                                     <TextBlock Text="EXPENSES (+)" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
                                     <TextBox Text="{Binding NewInvoice.ExtraCharges, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="32" VerticalContentAlignment="Center" HorizontalContentAlignment="Right" Padding="6,2" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Background="#FFFFFF" HorizontalAlignment="Right"/>
                                 </Grid>
