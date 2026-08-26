@@ -1249,9 +1249,18 @@ namespace EditModeTestSuite
                 {
                     var expectedReceivable = await db.Customers.SumAsync(c => c.OwesAmount);
                     var expectedPayable = await db.Vendors.SumAsync(v => v.OwesAmount);
+                    var cashSales = (decimal)await db.SaleInvoices.Where(s => s.Type != InvoiceType.SaleReturn).SumAsync(s => (double)s.PaidAmount);
+                    var saleReturns = (decimal)await db.SaleInvoices.Where(s => s.Type == InvoiceType.SaleReturn).SumAsync(s => (double)s.AmountRefunded);
+                    var cashPurchases = (decimal)await db.PurchaseInvoices.Where(p => p.Type != PurchaseType.PurchaseReturn).SumAsync(p => (double)p.AmountPaid);
+                    var cashReceipts = (decimal)await db.Receipts.Where(r => r.PaymentMethod == PaymentMethod.Cash).SumAsync(r => (double)r.Amount);
+                    var bankBalances = (decimal)await db.Banks.Where(b => b.IsActive).SumAsync(b => (double)b.CurrentBalance);
+                    var cashPayments = (decimal)await db.Payments.Where(p => p.PaymentMethod == PaymentMethod.Cash).SumAsync(p => (double)p.Amount);
+                    var expenses = (decimal)await db.Expenses.Where(e => e.PaymentMethod == PaymentMethod.Cash).SumAsync(e => (double)e.Amount);
+                    var expectedCashAndBank = (cashSales + cashReceipts + bankBalances) - (cashPurchases + cashPayments + saleReturns + expenses);
 
                     AssertTrue("Dashboard Receivables Card", summary.CustomerReceivables == expectedReceivable, $"Dashboard Receivables: {summary.CustomerReceivables}, Expected: {expectedReceivable}");
                     AssertTrue("Dashboard Payables Card", summary.VendorPayables == expectedPayable, $"Dashboard Payables: {summary.VendorPayables}, Expected: {expectedPayable}");
+                    AssertTrue("Dashboard Cash & Bank Card", summary.CashAndBanks == expectedCashAndBank, $"Dashboard Cash & Bank: {summary.CashAndBanks}, Expected: {expectedCashAndBank}");
                 }
             }
             catch (Exception ex)

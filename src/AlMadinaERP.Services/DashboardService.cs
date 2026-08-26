@@ -47,19 +47,19 @@ namespace AlMadinaERP.Services
                     .SumAsync(i => (double?)(double)(i.CurrentStock * i.PurchasePrice)) ?? 0);
 
                 var cashSales = (decimal)(await _context.SaleInvoices
-                    .Where(s => s.IsCashSale && s.Type != InvoiceType.SaleReturn)
+                    .Where(s => s.Type != InvoiceType.SaleReturn)
                     .AsNoTracking()
-                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
+                    .SumAsync(s => (double?)s.PaidAmount) ?? 0);
 
                 var saleReturns = (decimal)(await _context.SaleInvoices
                     .Where(s => s.Type == InvoiceType.SaleReturn)
                     .AsNoTracking()
-                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
+                    .SumAsync(s => (double?)s.AmountRefunded) ?? 0);
 
                 var cashPurchases = (decimal)(await _context.PurchaseInvoices
-                    .Where(p => p.IsCashPurchase && p.Type != PurchaseType.PurchaseReturn)
+                    .Where(p => p.Type != PurchaseType.PurchaseReturn)
                     .AsNoTracking()
-                    .SumAsync(p => (double?)p.TotalAmount) ?? 0);
+                    .SumAsync(p => (double?)p.AmountPaid) ?? 0);
 
                 var cashReceipts = (decimal)(await _context.Receipts
                     .Where(r => r.PaymentMethod == PaymentMethod.Cash)
@@ -89,20 +89,62 @@ namespace AlMadinaERP.Services
                     .AsNoTracking()
                     .SumAsync(s => (double?)s.TotalAmount) ?? 0);
 
-                var cashReceivedToday = (decimal)(await _context.Receipts
-                    .Where(r => r.Date >= today)
-                    .AsNoTracking()
-                    .SumAsync(r => (double?)r.Amount) ?? 0);
-
                 var purchasesToday = (decimal)(await _context.PurchaseInvoices
                     .Where(p => p.Date >= today && p.Type != PurchaseType.PurchaseReturn)
                     .AsNoTracking()
                     .SumAsync(p => (double?)p.TotalAmount) ?? 0);
 
-                var cashPaidToday = (decimal)(await _context.Payments
+                // Collections Today (Card 1: CashReceivedToday)
+                var receiptsReceivedToday = (decimal)(await _context.Receipts
+                    .Where(r => r.Date >= today)
+                    .AsNoTracking()
+                    .SumAsync(r => (double?)r.Amount) ?? 0);
+
+                var salesPaidToday = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.Date >= today && s.Type != InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.PaidAmount) ?? 0);
+
+                var cashReceivedToday = receiptsReceivedToday + salesPaidToday;
+
+                // Disbursements Today (Card 1: CashPaidToday)
+                var paymentsPaidToday = (decimal)(await _context.Payments
                     .Where(p => p.Date >= today)
                     .AsNoTracking()
                     .SumAsync(p => (double?)p.Amount) ?? 0);
+
+                var purchasesPaidToday = (decimal)(await _context.PurchaseInvoices
+                    .Where(p => p.Date >= today && p.Type != PurchaseType.PurchaseReturn)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.AmountPaid) ?? 0);
+
+                var expensesToday = (decimal)(await _context.Expenses
+                    .Where(e => e.Date >= today)
+                    .AsNoTracking()
+                    .SumAsync(e => (double?)e.Amount) ?? 0);
+
+                var returnsRefundedToday = (decimal)(await _context.SaleInvoices
+                    .Where(s => s.Date >= today && s.Type == InvoiceType.SaleReturn)
+                    .AsNoTracking()
+                    .SumAsync(s => (double?)s.AmountRefunded) ?? 0);
+
+                var cashPaidToday = paymentsPaidToday + purchasesPaidToday + expensesToday + returnsRefundedToday;
+
+                // Customer Collections Today (Card 2: ReceivedToday)
+                var customerReceiptsToday = (decimal)(await _context.Receipts
+                    .Where(r => r.Date >= today && r.CustomerId.HasValue && r.CustomerId.Value > 0)
+                    .AsNoTracking()
+                    .SumAsync(r => (double?)r.Amount) ?? 0);
+
+                var customerReceivedToday = customerReceiptsToday + salesPaidToday;
+
+                // Vendor Payments Today (Card 3: PaidToday)
+                var vendorPaymentsToday = (decimal)(await _context.Payments
+                    .Where(p => p.Date >= today && p.VendorId.HasValue && p.VendorId.Value > 0)
+                    .AsNoTracking()
+                    .SumAsync(p => (double?)p.Amount) ?? 0);
+
+                var vendorPaidToday = vendorPaymentsToday + purchasesPaidToday;
 
                 // Monthly Sales & Purchases
                 var monthlySales = (decimal)(await _context.SaleInvoices
@@ -146,11 +188,11 @@ namespace AlMadinaERP.Services
                     CurrentCashBankBalance = cashAndBanks,
 
                     OpeningReceivables = 0m,
-                    ReceivedToday = cashReceivedToday,
+                    ReceivedToday = customerReceivedToday,
                     TotalCustomerReceivables = customerReceivables,
 
                     OpeningPayables = 0m,
-                    PaidToday = cashPaidToday,
+                    PaidToday = vendorPaidToday,
                     TotalVendorPayables = vendorPayables,
 
                     BusinessHealthScore = (customerReceivables >= vendorPayables) ? 85 : 65,

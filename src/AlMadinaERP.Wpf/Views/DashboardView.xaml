@@ -93,7 +93,7 @@
                         <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="ReceiptsPayments" Background="#047857" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
 
                         <StackPanel>
-                            <Grid Margin="0,3">
+                            <Grid Margin="0,3" Visibility="Collapsed">
                                 <TextBlock Text="Opening Cash/Bank:" Foreground="#D1FAE5" FontSize="12"/>
                                 <TextBlock Text="{Binding Summary.OpeningCashBank, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                             </Grid>
