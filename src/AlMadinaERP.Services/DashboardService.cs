@@ -83,16 +83,16 @@ namespace AlMadinaERP.Services
 
                 var cashAndBanks = (cashSales + cashReceipts + bankBalances) - (cashPurchases + cashPayments + saleReturns + expenses);
 
-                // Sales Today & Cash Movements Today
-                var salesToday = (decimal)(await _context.SaleInvoices
+                // Sales Today & Purchases Today (Live Outstanding portion)
+                var outstandingSalesToday = (decimal)(await _context.SaleInvoices
                     .Where(s => s.Date >= today && s.Type != InvoiceType.SaleReturn)
                     .AsNoTracking()
-                    .SumAsync(s => (double?)s.TotalAmount) ?? 0);
+                    .SumAsync(s => (double?)s.OutstandingAmount) ?? 0);
 
-                var purchasesToday = (decimal)(await _context.PurchaseInvoices
+                var outstandingPurchasesToday = (decimal)(await _context.PurchaseInvoices
                     .Where(p => p.Date >= today && p.Type != PurchaseType.PurchaseReturn)
                     .AsNoTracking()
-                    .SumAsync(p => (double?)p.TotalAmount) ?? 0);
+                    .SumAsync(p => (double?)p.OutstandingAmount) ?? 0);
 
                 // Collections Today (Card 1: CashReceivedToday)
                 var receiptsReceivedToday = (decimal)(await _context.Receipts
@@ -136,15 +136,11 @@ namespace AlMadinaERP.Services
                     .AsNoTracking()
                     .SumAsync(r => (double?)r.Amount) ?? 0);
 
-                var customerReceivedToday = customerReceiptsToday + salesPaidToday;
-
                 // Vendor Payments Today (Card 3: PaidToday)
                 var vendorPaymentsToday = (decimal)(await _context.Payments
                     .Where(p => p.Date >= today && p.VendorId.HasValue && p.VendorId.Value > 0)
                     .AsNoTracking()
                     .SumAsync(p => (double?)p.Amount) ?? 0);
-
-                var vendorPaidToday = vendorPaymentsToday + purchasesPaidToday;
 
                 // Monthly Sales & Purchases
                 var monthlySales = (decimal)(await _context.SaleInvoices
@@ -176,8 +172,8 @@ namespace AlMadinaERP.Services
                     CustomerReceivables = customerReceivables,
                     VendorPayables = vendorPayables,
                     InventoryValue = inventoryValue,
-                    SalesToday = salesToday,
-                    PurchasesToday = purchasesToday,
+                    SalesToday = outstandingSalesToday,
+                    PurchasesToday = outstandingPurchasesToday,
                     MonthlySales = monthlySales,
                     MonthlyPurchases = monthlyPurchases,
                     NetProfit = netProfit,
@@ -186,13 +182,15 @@ namespace AlMadinaERP.Services
                     CashReceivedToday = cashReceivedToday,
                     CashPaidToday = cashPaidToday,
                     CurrentCashBankBalance = cashAndBanks,
+                    SalesTodayCash = salesPaidToday,
+                    ReceiptsReceivedToday = receiptsReceivedToday,
 
                     OpeningReceivables = 0m,
-                    ReceivedToday = customerReceivedToday,
+                    ReceivedToday = customerReceiptsToday,
                     TotalCustomerReceivables = customerReceivables,
 
                     OpeningPayables = 0m,
-                    PaidToday = vendorPaidToday,
+                    PaidToday = vendorPaymentsToday,
                     TotalVendorPayables = vendorPayables,
 
                     BusinessHealthScore = (customerReceivables >= vendorPayables) ? 85 : 65,

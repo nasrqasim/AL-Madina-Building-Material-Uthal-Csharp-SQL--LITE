@@ -99,8 +99,13 @@
                             </Grid>
 
                             <Grid Margin="0,3">
-                                <TextBlock Text="Cash Received Today (+):" Foreground="#D1FAE5" FontSize="12"/>
-                                <TextBlock Text="{Binding Summary.CashReceivedToday, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                <TextBlock Text="Sales Today (+):" Foreground="#D1FAE5" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.SalesTodayCash, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <Grid Margin="0,3">
+                                <TextBlock Text="Received Today (+):" Foreground="#D1FAE5" FontSize="12"/>
+                                <TextBlock Text="{Binding Summary.ReceiptsReceivedToday, StringFormat='+ Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                             </Grid>
 
                             <Grid Margin="0,3">
@@ -127,7 +132,7 @@
                         <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="CustomerBalances" Background="#1D4ED8" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
 
                         <StackPanel>
-                            <Grid Margin="0,3">
+                            <Grid Margin="0,3" Visibility="Collapsed">
                                 <TextBlock Text="Opening Receivables:" Foreground="#DBEAFE" FontSize="12"/>
                                 <TextBlock Text="{Binding Summary.OpeningReceivables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                             </Grid>
@@ -161,7 +166,7 @@
                         <Button DockPanel.Dock="Bottom" Content="View Ledger →" Command="{Binding DataContext.NavigateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="VendorBalances" Background="#BE123C" Foreground="#FFFFFF" HorizontalAlignment="Right" Padding="12,4" Margin="0,14,0,0"/>
 
                         <StackPanel>
-                            <Grid Margin="0,3">
+                            <Grid Margin="0,3" Visibility="Collapsed">
                                 <TextBlock Text="Opening Payables:" Foreground="#FFE4E6" FontSize="12"/>
                                 <TextBlock Text="{Binding Summary.OpeningPayables, StringFormat='Rs. {0:N0}'}" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                             </Grid>

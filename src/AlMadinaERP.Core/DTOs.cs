@@ -23,6 +23,8 @@ namespace AlMadinaERP.Core.DTOs
         public decimal CashReceivedToday { get; set; } = 0m;
         public decimal CashPaidToday { get; set; } = 0m;
         public decimal CurrentCashBankBalance { get; set; } = -1510m;
+        public decimal SalesTodayCash { get; set; } = 0m;
+        public decimal ReceiptsReceivedToday { get; set; } = 0m;
 
         public decimal OpeningReceivables { get; set; } = -17950m;
         public decimal ReceivedToday { get; set; } = 0m;
